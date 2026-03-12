@@ -11,8 +11,7 @@
 <body>
   <div id="root"></div>
 
- import { useState, useEffect, useCallback, useRef } from "react";
-
+<script type="text/babel">
 // ─── THEME ─────────────────────────────────────────────────────────────────
 const T = {
   bg:"#0c0c0c", surface:"#141414", high:"#1c1c1c",
@@ -256,7 +255,7 @@ const lbl = {fontSize:11,color:T.muted,marginBottom:5,letterSpacing:.4,display:"
 const card = (x={}) => ({background:T.surface,border:`1px solid ${T.border}`,borderRadius:14,padding:14,...x});
 
 // ─── APP ────────────────────────────────────────────────────────────────────
-export default function App() {
+const App = function() {
   const [items,    setItems]    = useState(() => BASE.map(b=>({...b,userNotes:"",_custom:false})));
   const [contacts, setContacts] = useState(DEFAULT_CONTACTS);
   const [warnings, setWarnings] = useState(DEFAULT_WARNINGS);
