@@ -1084,6 +1084,13 @@ const App = function() {
       <style>{`*{-webkit-tap-highlight-color:transparent;}::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#282828;border-radius:2px;}select,input,textarea{-webkit-appearance:none;}`}</style>
     </div>
   );
+  // the last line of your return statement or style
+  </div>
+);
 }
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>   <!-- ← ADD THIS LINE RIGHT HERE -->
 </body>
 </html>
