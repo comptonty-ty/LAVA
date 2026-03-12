@@ -11,19 +11,1080 @@
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
-  const App = () => {
-    return (
-      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
-        <h1 style={{ color: '#333' }}>Test Render Successful!</h1>
-        <p style={{ fontSize: '1.2em' }}>If you see this, React + Babel is working via CDN.</p>
-        <p>Now paste your real JSX code below this comment.</p>
+ import { useState, useEffect, useCallback, useRef } from "react";
+
+// ─── THEME ─────────────────────────────────────────────────────────────────
+const T = {
+  bg:"#0c0c0c", surface:"#141414", high:"#1c1c1c",
+  border:"#222", soft:"#1a1a1a",
+  text:"#e2ddd4", muted:"#555", faint:"#1e1e1e",
+  accent:"#e8a030", accentDim:"#2a1d00",
+  purple:"#9b6dff", purpleDim:"#1a1030",
+  green:"#34d399", greenDim:"#091a10",
+  red:"#f87171",   redDim:"#1a0808",
+  blue:"#60a5fa",  blueDim:"#091428",
+  orange:"#f97316",
+  F:"'Georgia','Times New Roman',serif",
+};
+
+// ─── CONSTANTS ──────────────────────────────────────────────────────────────
+const CATS = ["Initial Review & Data Gathering","Legal/Title Review","Zoning/Permitting","Environmental Due Diligence","Physical/Property Condition","Financial Due Diligence","Market Analysis","In-Depth Analysis","Infrastructure Cost","Risk Assessment","Operational/Other","Decision & Negotiation"];
+const PRIORITIES = ["Mandatory","Highly Recommended","Suggested","Mandatory (if RECs)"];
+const STATUSES   = ["Pending","In Progress","Complete","Blocked","N/A"];
+const PC = {"Mandatory":T.red,"Highly Recommended":T.blue,"Suggested":T.muted,"Mandatory (if RECs)":T.purple};
+const SC = {"Complete":T.green,"In Progress":T.blue,"Pending":T.muted,"Blocked":T.red,"N/A":"#4b5563"};
+const PRI_W = {"Mandatory":0,"Highly Recommended":1,"Suggested":2,"Mandatory (if RECs)":3};
+const STA_W = {"Blocked":0,"In Progress":1,"Pending":2,"N/A":3,"Complete":4};
+const dayNum = s => { const m=String(s||"").match(/\d+/); return m?parseInt(m[0]):999; };
+const uid = () => Math.random().toString(36).slice(2,10);
+const fmtSize = b => b>1048576?`${(b/1048576).toFixed(1)}MB`:b>1024?`${(b/1024).toFixed(0)}KB`:`${b}B`;
+const extIcon = n => ({pdf:"📄",xlsx:"📊",xls:"📊",doc:"📝",docx:"📝",png:"🖼",jpg:"🖼",jpeg:"🖼",csv:"📊",gif:"🖼"}[(n||"").split(".").pop().toLowerCase()]||"📎");
+
+// ─── DEFAULT CONTACTS ────────────────────────────────────────────────────────
+const DEFAULT_CONTACTS = [
+  {id:"c1",  group:"Title & Legal",          name:"First American Title",               role:"Title Company",                phone:"208-232-6260",  email:"idaho@firstam.com",          web:"firstam.com/title/id",        note:"Order title commitment/policy"},
+  {id:"c2",  group:"Title & Legal",          name:"Thomas J. Budge",                    role:"Attorney · Racine Olson PLLP", phone:"",              email:"",                           web:"racineolson.com",             note:"P.O. Box 1391, Pocatello ID 83204"},
+  {id:"c3",  group:"Bannock County",         name:"Bannock County Planning",            role:"Planning & Zoning",            phone:"208-236-7230",  email:"development@bannockcounty.gov",web:"bannockcounty.gov/planning",  note:"5500 S 5th Ave, Pocatello · M–Th 8am–5pm, F 8am–1pm"},
+  {id:"c4",  group:"Bannock County",         name:"Bannock County Assessor",            role:"Tax Assessment & Liens",       phone:"208-236-7260",  email:"assessor@bannockcounty.gov", web:"bannockcounty.gov/assessor",  note:"Tax delinquency certificates"},
+  {id:"c5",  group:"Bannock County",         name:"Bannock County Recorder",            role:"Public Records",               phone:"208-236-7340",  email:"",                           web:"bannockcounty.gov/recorder",  note:"624 E Center St, Pocatello · M–F 8am–5pm"},
+  {id:"c6",  group:"State Agencies",         name:"Idaho Secretary of State",           role:"Entity Verification",          phone:"",              email:"",                           web:"sosbiz.idaho.gov",            note:"Verify CKJ Ventures Idaho foreign qualification"},
+  {id:"c7",  group:"State Agencies",         name:"IDWR – Dept of Water Resources",     role:"Water & Geothermal Rights",    phone:"208-287-4800",  email:"idwrinfo@idwr.idaho.gov",    web:"research.idwr.idaho.gov",     note:"Search water rights database"},
+  {id:"c8",  group:"State Agencies",         name:"DEQ Pocatello Office",               role:"Environmental / Geothermal",   phone:"208-236-6160",  email:"deq.pocatello@deq.idaho.gov",web:"deq.idaho.gov/permits",       note:"Geothermal records; air quality"},
+  {id:"c9",  group:"State Agencies",         name:"Idaho Courts",                       role:"Judgment Search",              phone:"",              email:"",                           web:"mycourts.idaho.gov",          note:"Search CKJ Ventures, Kyle Jessee, Lava View, Lava Ridge"},
+  {id:"c10", group:"Local Utilities",        name:"Idaho Power",                        role:"Electric Service",             phone:"800-488-6151",  email:"",                           web:"idahopower.com",              note:"Confirm capacity and service connection"},
+  {id:"c11", group:"Local Utilities",        name:"Lava Hot Springs Water & Sewer",     role:"Water / Sewer",                phone:"208-776-5221",  email:"",                           web:"",                            note:"Confirm capacity letters · Dev Agreement references City service"},
+  {id:"c12", group:"Engineers & Consultants",name:"Galena Engineering",                 role:"Licensed Surveyor",            phone:"208-232-2955",  email:"",                           web:"",                            note:"ALTA/NSPS survey"},
+  {id:"c13", group:"Engineers & Consultants",name:"Strata Geotech",                     role:"Geotechnical Engineer",        phone:"208-232-5544",  email:"",                           web:"stratageotech.com",           note:"Soil boring / geotech report"},
+  {id:"c14", group:"Engineers & Consultants",name:"Terragraphics",                      role:"Environmental Consultant",     phone:"208-234-1573",  email:"",                           web:"terragraphics.com",           note:"Phase I ESA"},
+  {id:"c15", group:"Engineers & Consultants",name:"JUB Engineers",                      role:"Civil / Site Engineering",     phone:"208-232-1199",  email:"",                           web:"jub.com",                     note:"General civil consultant"},
+  {id:"c16", group:"Engineers & Consultants",name:"Idaho Fish & Game – Bannock",        role:"Wildlife & Habitat",           phone:"208-232-9306",  email:"",                           web:"idfg.idaho.gov",              note:"Wildlife / habitat impact check"},
+  {id:"c17", group:"Engineers & Consultants",name:"Idaho Dept of Transportation",       role:"Access / Egress",             phone:"208-334-8300",  email:"",                           web:"itd.idaho.gov",               note:"IDOT maps for road access"},
+  {id:"c18", group:"Lender & Finance",       name:"ICCU (Idaho Central Credit Union)",  role:"Lender",                       phone:"800-456-5067",  email:"",                           web:"iccu.com",                    note:"Contact for loan requirements"},
+  {id:"c19", group:"Seller / Project",       name:"CKJ Ventures Inc.",                  role:"Seller / Developer",           phone:"",              email:"",                           web:"",                            note:"Kyle Jessee, President · 4347 S Garden Dr, Millcreek UT 84124"},
+  {id:"c20", group:"Seller / Project",       name:"City of Lava Hot Springs",           role:"Municipality",                 phone:"208-776-5221",  email:"",                           web:"",                            note:"Annexation Ordinance 2023-4 · Dev Agreement counterparty"},
+];
+
+const CONTACT_GROUPS = ["Title & Legal","Bannock County","State Agencies","Local Utilities","Engineers & Consultants","Lender & Finance","Seller / Project","Other"];
+
+// ─── DEFAULT WARNINGS ────────────────────────────────────────────────────────
+const DEFAULT_WARNINGS = [
+  {id:"w1", title:"Development Agreement May Be UNSIGNED", body:"Seller-provided draft (8/17/25). City block shows blank ordinance number and no effective date. Until a fully countersigned, recorded copy is confirmed — NO terms can be relied upon (not STR permissions, not vested rights, not setbacks). Potentially a deal-stopper.", level:"critical"},
+  {id:"w2", title:"STR Moratorium — Resolution 2025-004", body:"City imposed moratorium on new Vacation Rental/Tourist Home licenses. If Dev Agreement is unexecuted, vested rights clause (§9) does not apply. Both issues must be evaluated together by attorney before further spend.", level:"critical"},
+  {id:"w3", title:'"Lava Project Information" (3/2025) — Unverified Seller Marketing Doc', body:"All projections, cost estimates, revenue figures, and timelines are UNVERIFIED SELLER REPRESENTATIONS. Nothing in it should be relied upon without independent confirmation. Build your own pro forma from independent data.", level:"warn"},
+  {id:"w4", title:"$110k All-Inclusive DOT — No Reconveyance Found", body:"Instrument #20709541 (2007, Lava View → Lava Ridge) has NO Deed of Reconveyance on record. May still be an active encumbrance. Must confirm payoff and obtain release before closing.", level:"warn"},
+];
+
+// ─── SESSION REFERENCE FILES (pre-linked to tasks from due diligence session) ─
+const SESSION_REFS = [
+  {refId:"sr1",  name:"LAVA PROJECT INFORMATION - updated 3_2025.pdf",     warn:"⚠ Seller marketing doc — all figures unverified",              taskIds:[6,68,80,81,102,104,105,131]},
+  {refId:"sr2",  name:"DEVELOPMENT AGREEMENT - 8_17_25.pdf",               warn:"⚠ Seller-provided — unknown signature status",                 taskIds:[2,12,13,14,16,38,69,70]},
+  {refId:"sr3",  name:"Corporate Warranty Deed (Instrument 20403844).pdf", warn:"",                                                             taskIds:[1,17,29,30]},
+  {refId:"sr4",  name:"Warranty Deed (Instrument 20709540).pdf",           warn:"",                                                             taskIds:[1,17,29,30]},
+  {refId:"sr5",  name:"All-Inclusive DOT (Instrument 20709541).pdf",       warn:"⚠ No reconveyance found — potential active lien",             taskIds:[29,31,32]},
+  {refId:"sr6",  name:"Deed of Reconveyance (Instrument 20822507).pdf",   warn:"",                                                             taskIds:[29,30]},
+  {refId:"sr7",  name:"Record of Survey - Maughn Road.pdf",                warn:"",                                                             taskIds:[4,30,36,37]},
+  {refId:"sr8",  name:"Record of Survey 20904880.pdf",                     warn:"",                                                             taskIds:[4,30,36,37]},
+  {refId:"sr9",  name:"Record of Survey 20820973.pdf",                     warn:"",                                                             taskIds:[4,30,36,37]},
+  {refId:"sr10", name:"CONTRACT ZONE - EXHIBIT D.pdf",                     warn:"⚠ Seller-provided — verify with City",                        taskIds:[12,13,14,25,38,73,90,91]},
+  {refId:"sr11", name:"Exhibit A - Property Description.pdf",              warn:"",                                                             taskIds:[37,21,29]},
+  {refId:"sr12", name:"LAVA SITE PLAN - Exhibit B.pdf",                    warn:"⚠ Seller-provided — verify on site",                          taskIds:[16,24,84,98]},
+  {refId:"sr13", name:"Annexation Ordinance 2023-4.pdf",                   warn:"",                                                             taskIds:[12,13,25,26,27]},
+  {refId:"sr14", name:"Lava_Due_Diligence.xlsx",                           warn:"",                                                             taskIds:[1,7,99,133]},
+];
+
+// Build flat list of all ref entries (one per task linkage)
+const ALL_SESSION_REF_ENTRIES = SESSION_REFS.flatMap(r =>
+  r.taskIds.map(tid => ({
+    id: `${r.refId}_${tid}`,
+    refId: r.refId,
+    taskId: tid,
+    name: r.name,
+    warn: r.warn,
+    isRef: true,      // session reference — no data until uploaded
+    data: null,
+    size: 0,
+    uploadedAt: null,
+    type: r.name.endsWith(".xlsx") ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/pdf",
+  }))
+);
+
+// ─── BASE ITEMS (137) ────────────────────────────────────────────────────────
+const BASE = [
+  {id:1,  cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Complete",day:"Day 1",   assigned:"Travis",     cost:"—",          task:"Request deeds from seller",                                            purpose:"Verify ownership chain and title history.",                                             contact:"",                                                                       notes:"Chain: ISU Foundation (2004) → Lava Ridge Estates → Lava View Investments (2007)."},
+  {id:2,  cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Complete",day:"Day 1",   assigned:"Travis",     cost:"—",          task:"Request existing permits from seller",                                  purpose:"Confirm development approvals and entitlements.",                                       contact:"",                                                                       notes:"Dev Agreement provided. ⚠ SELLER-PROVIDED — may be UNSIGNED. Verify independently."},
+  {id:3,  cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Travis",     cost:"—",          task:"Request title policies from seller",                                    purpose:"Identify prior encumbrances and coverage.",                                             contact:"",                                                                       notes:""},
+  {id:4,  cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Complete",day:"Day 1",   assigned:"Travis",     cost:"—",          task:"Request surveys from seller",                                           purpose:"Obtain boundary and easement details.",                                                 contact:"",                                                                       notes:"Surveys provided: Maughn Road + Gem Valley Survey records (2008)."},
+  {id:5,  cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Travis",     cost:"—",          task:"Request environmental reports from seller",                             purpose:"Assess potential contamination risks.",                                                 contact:"",                                                                       notes:""},
+  {id:6,  cat:"Initial Review & Data Gathering",priority:"Suggested",        status:"Pending", day:"Day 1",   assigned:"Travis",     cost:"—",          task:"Request financial statements from seller",                              purpose:"Evaluate property financial history.",                                                  contact:"",                                                                       notes:"⚠ SELLER-PROVIDED — treat all seller financials as unverified representations only."},
+  {id:7,  cat:"Initial Review & Data Gathering",priority:"Highly Recommended",status:"Pending",day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Schedule team kickoff meeting",                                         purpose:"Align team on roles and timeline.",                                                     contact:"",                                                                       notes:""},
+  {id:8,  cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"$200–400",   task:"Order preliminary title report and boundary survey",                   purpose:"Obtain current title and boundary info.",                                               contact:"First American Title · 208-232-6260 · idaho@firstam.com · firstam.com/title/id",notes:""},
+  {id:9,  cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Check liens via Bannock County Tax Assessor",                           purpose:"Identify tax-related liens.",                                                           contact:"bannockcounty.gov/assessor · 208-236-7260 · assessor@bannockcounty.gov", notes:""},
+  {id:10, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"$50–100",    task:"Obtain tax delinquency certificate",                                    purpose:"Confirm no unpaid taxes.",                                                              contact:"208-236-7260 · assessor@bannockcounty.gov",                              notes:""},
+  {id:11, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Check for judgments against seller and property",                       purpose:"Detect legal judgments or liens.",                                                      contact:"mycourts.idaho.gov",                                                     notes:"Search: CKJ Ventures, Kyle Jessee, Lava View Investments, Lava Ridge Estates."},
+  {id:12, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Complete",day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Request existing zoning, permits & entitlements from seller",           purpose:"Secure approval documents.",                                                            contact:"Seller contacts from PSA",                                               notes:"⚠ SELLER-PROVIDED — verify independently with City and Bannock County."},
+  {id:13, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Verify existing approvals with Bannock County Planning",                purpose:"Confirm validity of approvals.",                                                        contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:14, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Check for permit expiration and ordinance compliance",                  purpose:"Ensure permits are active.",                                                            contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:15, cat:"Zoning/Permitting",              priority:"Highly Recommended",status:"Pending",day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Contact Bannock Planning for pre-app meeting",                          purpose:"Schedule preliminary review.",                                                          contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:16, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Complete",day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Prepare site plan sketch for pre-app meeting",                          purpose:"Create visual for discussion.",                                                         contact:"208-236-7230 · development@bannockcounty.gov",                           notes:"⚠ SELLER-PROVIDED site plan from NCJ Remodeling (May 2025) — verify on site."},
+  {id:17, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Complete",day:"Day 1",   assigned:"Travis",     cost:"$200–400",   task:"Request title commitment/policy from seller",                           purpose:"Acquire current title status.",                                                         contact:"",                                                                       notes:"Warranty Deeds: ISU Foundation (2004) → Lava Ridge → Lava View (2007)."},
+  {id:18, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"Included",   task:"Order title commitment/policy if not provided",                         purpose:"Secure independent title review.",                                                      contact:"First American Title · 208-232-6260",                                    notes:""},
+  {id:19, cat:"Legal/Title Review",             priority:"Highly Recommended",status:"Pending",day:"Day 1",   assigned:"Ty",         cost:"$0–10",      task:"Search public records for title issues",                                purpose:"Identify recent recordings.",                                                           contact:"bannockcounty.gov/recorder · idocmarket.com/BannockID/Search · 208-236-7340",notes:""},
+  {id:20, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Request seller entity docs (Operating Agreement, Articles)",            purpose:"Verify entity authority.",                                                              contact:"Seller contacts from PSA",                                               notes:""},
+  {id:21, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Search Idaho SOS — verify seller authority to sell",                    purpose:"Confirm entity status. CKJ Ventures is Utah corp — verify Idaho foreign qualification.", contact:"sosbiz.idaho.gov",                                                      notes:"Also check businessregistration.utah.gov"},
+  {id:22, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Confirm authorized signer via operating agreement",                     purpose:"Ensure signer has authority.",                                                          contact:"Seller contacts from PSA",                                               notes:""},
+  {id:23, cat:"Physical/Property Condition",    priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Schedule site visit with seller",                                       purpose:"Arrange access.",                                                                       contact:"Seller contacts from PSA",                                               notes:""},
+  {id:24, cat:"Physical/Property Condition",    priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Document features and conditions during site visit",                    purpose:"Record observations for due diligence.",                                                contact:"Seller contacts from PSA",                                               notes:""},
+  {id:25, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Download Zoning Map PDF to confirm zoning",                             purpose:"Visual zone check.",                                                                    contact:"bannockcounty.gov/planning · 208-236-7230",                              notes:""},
+  {id:26, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"—",          task:"Query parcel in interactive map or call Planning",                      purpose:"Parcel-specific confirmation.",                                                         contact:"208-236-7230 · 5500 S 5th Ave, Pocatello · M–Th 8am–5pm, F 8am–1pm",   notes:""},
+  {id:27, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Pending", day:"Day 1",   assigned:"Ty",         cost:"$50",        task:"Request zoning verification letter",                                    purpose:"Obtain official written certification.",                                                contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:28, cat:"Initial Review & Data Gathering",priority:"Mandatory",        status:"Pending", day:"Day 2",   assigned:"Travis",     cost:"—",          task:"Conduct initial site visit",                                            purpose:"Inspect property condition firsthand.",                                                 contact:"",                                                                       notes:""},
+  {id:29, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Complete",day:"Days 3–5",assigned:"Ty",         cost:"Included",   task:"Review title report line-by-line for encumbrances",                    purpose:"Detect issues in title chain.",                                                         contact:"Title company contacts",                                                 notes:"⚠ All-Inclusive DOT #20709541 ($110k, 2007) — NO reconveyance found. Potential active lien."},
+  {id:30, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Complete",day:"Days 3–5",assigned:"Ty",         cost:"Included",   task:"Cross-check title report with survey",                                 purpose:"Ensure consistency across documents.",                                                  contact:"Surveyor contacts",                                                      notes:"No inconsistencies. Zions Bank DOT (#20404919) properly reconveyed 2008."},
+  {id:31, cat:"Legal/Title Review",             priority:"Suggested",        status:"Pending", day:"Days 3–5",assigned:"Ty",         cost:"$0–10",      task:"Search Bannock Recorder for any flagged docs",                          purpose:"Investigate title flags.",                                                              contact:"208-236-7340 · 624 E Center St, Pocatello · M–F 8am–5pm",               notes:""},
+  {id:32, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Ty",         cost:"—",          task:"Verify no mineral/geothermal rights severed from title",                purpose:"Check rights status.",                                                                  contact:"idwr.idaho.gov · 208-287-4800 · idwrinfo@idwr.idaho.gov",               notes:""},
+  {id:33, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Consultant", cost:"—",          task:"Search IDWR water rights database",                                     purpose:"Confirm all water/mineral rights.",                                                     contact:"research.idwr.idaho.gov · 208-287-4800",                                 notes:""},
+  {id:34, cat:"Legal/Title Review",             priority:"Highly Recommended",status:"Pending",day:"Days 3–5",assigned:"Consultant", cost:"—",          task:"Call IDWR for water/mineral rights verification",                       purpose:"Validate database findings.",                                                           contact:"208-287-4800 · idwrinfo@idwr.idaho.gov",                                 notes:""},
+  {id:35, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Consultant", cost:"$100–300",   task:"Check DEQ records for geothermal/mineral rights",                       purpose:"Review existing permits.",                                                              contact:"deq.idaho.gov/permits · 208-236-6160 · deq.pocatello@deq.idaho.gov",    notes:""},
+  {id:36, cat:"Physical/Property Condition",    priority:"Highly Recommended",status:"Pending",day:"Days 3–5",assigned:"Surveyor",   cost:"$2k–5k",     task:"Hire licensed surveyor for ALTA/NSPS survey",                          purpose:"Obtain current independent survey.",                                                    contact:"ispls.org · Galena Engineering: 208-232-2955",                           notes:""},
+  {id:37, cat:"Physical/Property Condition",    priority:"Highly Recommended",status:"Complete",day:"Days 3–5",assigned:"Surveyor",  cost:"Included",   task:"Provide legal description and receive ALTA/NSPS survey",               purpose:"Verify boundaries.",                                                                    contact:"Surveyor contacts",                                                      notes:"Property description in Exhibit A: 3 parcels with metes and bounds."},
+  {id:38, cat:"Zoning/Permitting",              priority:"Mandatory",        status:"Complete",day:"Days 3–5",assigned:"Planner",    cost:"—",          task:"Review Bannock Zoning Ordinance: setbacks, density, height",           purpose:"Understand development rules.",                                                         contact:"208-236-7230 · development@bannockcounty.gov",                           notes:"Contract Zone: 10ft between dwellings, 45ft/5-story max. ⚠ SELLER-PROVIDED — verify."},
+  {id:39, cat:"Zoning/Permitting",              priority:"Suggested",        status:"Pending", day:"Days 3–5",assigned:"Planner",    cost:"$200–500",   task:"Hire planner to interpret ordinance",                                   purpose:"Expert interpretation of setbacks, density, height.",                                   contact:"idaho.planning.org",                                                     notes:""},
+  {id:40, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Consultant", cost:"—",          task:"FEMA MSC review for wetlands/flood zones",                              purpose:"Check flood risks.",                                                                    contact:"msc.fema.gov/portal/search",                                             notes:""},
+  {id:41, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Consultant", cost:"—",          task:"Use NFHL Viewer to review wetlands/flood zones",                        purpose:"Map flood hazards.",                                                                    contact:"arcgis.com — NFHL Viewer",                                               notes:""},
+  {id:42, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Consultant", cost:"—",          task:"Download official FEMA flood map",                                      purpose:"Obtain official flood zone documentation.",                                             contact:"msc.fema.gov/portal/search",                                             notes:""},
+  {id:43, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Days 3–5",assigned:"Ty",         cost:"—",          task:"Search IDWR database for water rights",                                 purpose:"Confirm all water rights.",                                                             contact:"research.idwr.idaho.gov · 208-287-4800",                                 notes:""},
+  {id:44, cat:"Environmental Due Diligence",    priority:"Highly Recommended",status:"Pending",day:"Days 3–5",assigned:"Ty",         cost:"—",          task:"Call IDWR for water rights verification",                               purpose:"Validate database findings.",                                                           contact:"208-287-4800 · idwrinfo@idwr.idaho.gov",                                 notes:""},
+  {id:45, cat:"Environmental Due Diligence",    priority:"Suggested",        status:"Pending", day:"Days 3–5",assigned:"Ty",         cost:"Included",   task:"Apply for formal water rights verification",                            purpose:"Obtain formal confirmation.",                                                           contact:"208-287-4800 · idwrinfo@idwr.idaho.gov",                                 notes:""},
+  {id:46, cat:"Financial Due Diligence",        priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Travis",     cost:"—",          task:"Check Assessor site for current tax assessment",                        purpose:"Assess current tax liability.",                                                         contact:"bannockcounty.gov/assessor · 208-236-7260",                              notes:""},
+  {id:47, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"—",          task:"Obtain covenants/CC&Rs from title report or seller",                   purpose:"Review use restrictions.",                                                              contact:"Title company or seller contacts",                                        notes:""},
+  {id:48, cat:"Legal/Title Review",             priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"—",          task:"If HOA exists, contact HOA board",                                      purpose:"Check HOA rules and dues.",                                                             contact:"Bannock Recorder: 208-236-7340",                                         notes:""},
+  {id:49, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"Included",   task:"Analyze covenants/CC&Rs for restrictions",                             purpose:"Detect use bans or rental restrictions.",                                               contact:"",                                                                       notes:""},
+  {id:50, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"$500–1,000", task:"Select insurer for title insurance",                                    purpose:"Choose coverage provider.",                                                             contact:"First American · 208-232-6260 · idaho@firstam.com",                      notes:""},
+  {id:51, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"Included",   task:"Request endorsements for title insurance",                              purpose:"Add specific protections to policy.",                                                   contact:"Selected insurer contacts",                                               notes:""},
+  {id:52, cat:"Legal/Title Review",             priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"Included",   task:"Pay premium for title insurance",                                       purpose:"Secure policy.",                                                                        contact:"Selected insurer contacts",                                               notes:""},
+  {id:53, cat:"Physical/Property Condition",    priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Travis",     cost:"$500–1k",    task:"Hire inspector for general property inspection",                        purpose:"Assess overall condition.",                                                             contact:"homeinspector.org (search local)",                                        notes:""},
+  {id:54, cat:"Physical/Property Condition",    priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Inspector",  cost:"Included",   task:"Walk site and document all findings",                                   purpose:"Record condition findings.",                                                            contact:"Inspector contacts",                                                      notes:""},
+  {id:55, cat:"Physical/Property Condition",    priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Engineer",   cost:"$500",       task:"Check IDOT maps for access/egress",                                     purpose:"Evaluate road access.",                                                                 contact:"itd.idaho.gov · 208-334-8300",                                           notes:""},
+  {id:56, cat:"Physical/Property Condition",    priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Engineer",   cost:"$200–500",   task:"Contact utility providers for utilities assessment",                    purpose:"Check capacity and service availability.",                                              contact:"Idaho Power: 800-488-6151 · Lava Hot Springs Water/Sewer: 208-776-5221", notes:"Dev Agreement states City provides water/sewer upon annexation — verify independently."},
+  {id:57, cat:"Physical/Property Condition",    priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Engineer",   cost:"Included",   task:"Request capacity letters from utilities",                               purpose:"Confirm service is feasible.",                                                          contact:"Utility providers",                                                       notes:""},
+  {id:58, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Env. Consultant",cost:"$1,800–4,500",task:"Hire certified consultant for Phase I ESA",                      purpose:"Check for contamination.",                                                              contact:"terragraphics.com · 208-234-1573",                                        notes:""},
+  {id:59, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Env. Consultant",cost:"Included", task:"Conduct records review/site recon for Phase I ESA",                   purpose:"Gather ESA data.",                                                                      contact:"Consultant contacts",                                                     notes:""},
+  {id:60, cat:"Environmental Due Diligence",    priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"Env. Consultant",cost:"Included", task:"Receive and review Phase I ESA report",                               purpose:"Review findings.",                                                                      contact:"Consultant contacts",                                                     notes:""},
+  {id:61, cat:"Environmental Due Diligence",    priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Consultant", cost:"$1k–3k",     task:"Search DEQ permits for geothermal resources",                           purpose:"Check legal status of geothermal use.",                                                 contact:"deq.idaho.gov/permits",                                                   notes:""},
+  {id:62, cat:"Environmental Due Diligence",    priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Consultant", cost:"Included",   task:"Call DEQ Pocatello for geothermal records",                             purpose:"Verify geothermal sustainability.",                                                     contact:"208-236-6160 · deq.pocatello@deq.idaho.gov",                             notes:""},
+  {id:63, cat:"Environmental Due Diligence",    priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Consultant", cost:"Included",   task:"Hire hydrogeologist for geothermal flow test",                          purpose:"Test geothermal viability.",                                                            contact:"Hydrogeologist (consultant to recommend)",                                notes:""},
+  {id:64, cat:"Market Analysis",               priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Ty",         cost:"—",          task:"Go to Visit Idaho for tourism visitor stats",                           purpose:"Validate market demand.",                                                               contact:"visitidaho.org · industry.visitidaho.org/research",                      notes:""},
+  {id:65, cat:"Market Analysis",               priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Ty",         cost:"—",          task:"Research Lava-specific visitor stats",                                  purpose:"Assess seasonality.",                                                                   contact:"idahopress.com (search online)",                                          notes:""},
+  {id:66, cat:"Market Analysis",               priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"—",          task:"Idaho Commerce reports for economic impact trends",                     purpose:"Evaluate market growth trends.",                                                        contact:"commerce.idaho.gov/tourism",                                              notes:""},
+  {id:67, cat:"Market Analysis",               priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Ty",         cost:"—",          task:"Check Idaho Tourism grants for eco-resort incentives",                  purpose:"Explore funding opportunities.",                                                        contact:"commerce.idaho.gov/grants",                                               notes:""},
+  {id:68, cat:"Market Analysis",               priority:"Mandatory",        status:"Pending", day:"Day 5",   assigned:"TBD",        cost:"$200–500",   task:"Airbnb/Vrbo/CoStar comp analysis for nearby resorts",                  purpose:"Set realistic rents — independent data ONLY, not seller projections.",    contact:"Airbnb · Vrbo · CoStar (online)",                                        notes:"Independent data: ADR $255–260/night, occupancy 36–43%, 128–236 active listings."},
+  {id:69, cat:"Zoning/Permitting",             priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Planner",    cost:"$100–300",   task:"Submit pre-app for variances/special exceptions",                       purpose:"Seek wheeled units approval.",                                                          contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:70, cat:"Zoning/Permitting",             priority:"Suggested",        status:"Pending", day:"Day 5",   assigned:"Planner",    cost:"Included",   task:"Attend pre-app meeting for variances/special exceptions",               purpose:"Clarify requirements.",                                                                 contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:71, cat:"Zoning/Permitting",             priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Planner",    cost:"—",          task:"Download Bannock Comp Plan",                                            purpose:"Check alignment with tourism goals.",                                                   contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:72, cat:"Zoning/Permitting",             priority:"Highly Recommended",status:"Pending",day:"Day 5",   assigned:"Planner",    cost:"—",          task:"Analyze Bannock Comp Plan for tourism goals",                           purpose:"Support grant eligibility.",                                                            contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:73, cat:"Legal/Title Review",            priority:"Mandatory",        status:"Pending", day:"Day 7",   assigned:"Ty",         cost:"—",          task:"Check Bannock zoning to confirm tiny homes classification",              purpose:"Ensure proper classification.",                                                         contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:74, cat:"Legal/Title Review",            priority:"Mandatory",        status:"Pending", day:"Day 7",   assigned:"Ty",         cost:"—",          task:"Review IRC Appendix Q for tiny homes compliance",                       purpose:"Confirm code compliance.",                                                              contact:"dopl.idaho.gov/building",                                                 notes:""},
+  {id:75, cat:"In-Depth Analysis",             priority:"Highly Recommended",status:"Pending",day:"Day 8",   assigned:"TBD",        cost:"Varies",     task:"Hire consultants for expert reviews",                                   purpose:"Obtain expert evaluations.",                                                            contact:"jub.com · 208-232-1199",                                                  notes:""},
+  {id:76, cat:"In-Depth Analysis",             priority:"Mandatory",        status:"Pending", day:"Day 8",   assigned:"TBD",        cost:"$0–100",     task:"Submit requests to agencies",                                           purpose:"Get official agency verifications.",                                                    contact:"Agency contacts (e.g., 208-236-7230)",                                   notes:""},
+  {id:77, cat:"In-Depth Analysis",             priority:"Mandatory",        status:"Pending", day:"Day 8",   assigned:"Team",       cost:"Included",   task:"Review interim reports for issues",                                     purpose:"Adjust plan for findings.",                                                             contact:"Consultant contacts",                                                     notes:""},
+  {id:78, cat:"Financial Due Diligence",       priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"TBD",        cost:"—",          task:"Contact lender for requirements",                                       purpose:"Understand loan requirements.",                                                         contact:"iccu.com · 800-456-5067",                                                 notes:""},
+  {id:79, cat:"Financial Due Diligence",       priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Appraiser",  cost:"$1k–2k",     task:"Hire appraiser for property appraisal",                                 purpose:"Determine independent value.",                                                          contact:"dopl.idaho.gov/appraisers (search licensed)",                             notes:""},
+  {id:80, cat:"Financial Due Diligence",       priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Accountant", cost:"$500–1k",    task:"Request P&Ls and tax returns from seller",                              purpose:"Analyze financial history.",                                                            contact:"Seller contacts from PSA",                                                notes:"⚠ SELLER-PROVIDED — context only, do not rely on for pro forma."},
+  {id:81, cat:"Financial Due Diligence",       priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Accountant", cost:"Included",   task:"Analyze seller financials for anomalies",                               purpose:"Detect problems.",                                                                      contact:"Accountant contacts",                                                     notes:"⚠ SELLER-PROVIDED — all figures unverified."},
+  {id:82, cat:"Physical/Property Condition",   priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"$1k–2k",     task:"Hire engineer for structural report on existing structures",            purpose:"Check safety of cabin/barn.",                                                           contact:"208-232-1199",                                                            notes:""},
+  {id:83, cat:"Physical/Property Condition",   priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"Included",   task:"Assess stability and identify repairs needed",                          purpose:"Identify repairs needed.",                                                              contact:"Engineer contacts",                                                       notes:""},
+  {id:84, cat:"Physical/Property Condition",   priority:"Highly Recommended",status:"Pending",day:"Day 10",  assigned:"Engineer",   cost:"Included",   task:"Assess roads and parking adequacy",                                     purpose:"Plan infrastructure adequacy.",                                                         contact:"Engineer contacts",                                                       notes:""},
+  {id:85, cat:"Physical/Property Condition",   priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"Incl. geotech",task:"Hire for soil boring/percolation tests",                            purpose:"Test septic feasibility.",                                                              contact:"Engineer contacts",                                                       notes:""},
+  {id:86, cat:"Environmental Due Diligence",   priority:"Highly Recommended",status:"Pending",day:"Day 10",  assigned:"Consultant", cost:"$500–1k",    task:"Search Idaho Fish & Game for wildlife/habitat impacts",                 purpose:"Check protected species.",                                                              contact:"idfg.idaho.gov",                                                          notes:""},
+  {id:87, cat:"Environmental Due Diligence",   priority:"Highly Recommended",status:"Pending",day:"Day 10",  assigned:"Consultant", cost:"Included",   task:"Call Bannock Fish & Game for local wildlife impacts",                   purpose:"Confirm local impacts.",                                                                contact:"208-232-9306",                                                            notes:""},
+  {id:88, cat:"Environmental Due Diligence",   priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Consultant", cost:"$1k–2k",     task:"Hire inspector for hazardous materials survey",                         purpose:"Detect hazards in existing structures.",                                                contact:"dopl.idaho.gov",                                                          notes:""},
+  {id:89, cat:"Environmental Due Diligence",   priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Consultant", cost:"Included",   task:"Test samples for hazardous materials",                                  purpose:"Assess abatement needs.",                                                               contact:"Inspector contacts",                                                      notes:""},
+  {id:90, cat:"Zoning/Permitting",             priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Planner",    cost:"—",          task:"Review ordinance for Planned Unit Development options",                 purpose:"Explore flexibility.",                                                                  contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:91, cat:"Zoning/Permitting",             priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Planner",    cost:"—",          task:"Discuss PUD options with Planning",                                     purpose:"Get Planning input.",                                                                   contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:92, cat:"Zoning/Permitting",             priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"—",          task:"Review Idaho ADA standards for resort access",                          purpose:"Ensure accessibility.",                                                                 contact:"dopl.idaho.gov/ada",                                                      notes:""},
+  {id:93, cat:"Zoning/Permitting",             priority:"Highly Recommended",status:"Pending",day:"Day 10",  assigned:"Engineer",   cost:"$300–500",   task:"Hire accessibility consultant",                                         purpose:"Verify ADA compliance.",                                                                contact:"Accessibility consultant (engineer to recommend)",                        notes:""},
+  {id:94, cat:"Market Analysis",               priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Consultant", cost:"$300",       task:"Use Census data for demographic study",                                 purpose:"Target market analysis.",                                                               contact:"data.census.gov",                                                         notes:""},
+  {id:95, cat:"Market Analysis",               priority:"Suggested",        status:"Pending", day:"Day 10",  assigned:"Consultant", cost:"Included",   task:"Use Longwoods/Visit Idaho reports for projections",                     purpose:"Forecast tourism growth.",                                                              contact:"visitidaho.org",                                                          notes:""},
+  {id:96, cat:"Environmental Due Diligence",   priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"$2k–5k",     task:"Hire geotech engineer for soil/geotech report",                         purpose:"Test soil stability.",                                                                  contact:"stratageotech.com · 208-232-5544",                                        notes:""},
+  {id:97, cat:"Environmental Due Diligence",   priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"Included",   task:"Conduct soil borings for geotech report",                               purpose:"Ensure ground stability.",                                                              contact:"Engineer contacts",                                                       notes:""},
+  {id:98, cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"$1k–2k",     task:"Detailed site assessment for infrastructure",                           purpose:"Identify all infrastructure needs.",                                                    contact:"Engineer contacts",                                                       notes:""},
+  {id:99, cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Ty",         cost:"—",          task:"Define infrastructure categories",                                      purpose:"List all requirements for estimation.",                                                 contact:"",                                                                        notes:"Categories: Site prep, water, sewer, electricity, gas, telecom, roads, stormwater, waste, lighting/security, landscaping, fire safety, permits/fees."},
+  {id:100,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Planner",    cost:"—",          task:"Research local regulations for infrastructure",                         purpose:"Ensure compliance.",                                                                    contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:101,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 10",  assigned:"Engineer",   cost:"—",          task:"Contact utility providers",                                             purpose:"Gather service and cost info.",                                                         contact:"Idaho Power: 800-488-6151 · Lava Hot Springs Water/Sewer: 208-776-5221", notes:""},
+  {id:102,cat:"Financial Due Diligence",       priority:"Highly Recommended",status:"Pending",day:"Day 15",  assigned:"TBD",        cost:"—",          task:"Contact agents for insurance quotes",                                   purpose:"Get property and liability premiums.",                                                  contact:"statefarm.com (online)",                                                  notes:""},
+  {id:103,cat:"Financial Due Diligence",       priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Accountant", cost:"—",          task:"Use RSMeans data for Capex/Opex estimates",                             purpose:"Estimate development costs.",                                                           contact:"rsmeans.com",                                                             notes:""},
+  {id:104,cat:"Financial Due Diligence",       priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"TBD",        cost:"—",          task:"Use template for pro forma build",                                      purpose:"Standardize model — independent data only.",                                            contact:"biggerpockets.com/tools",                                                 notes:""},
+  {id:105,cat:"Financial Due Diligence",       priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"TBD",        cost:"—",          task:"Input all data for pro forma build",                                    purpose:"Calculate ROI.",                                                                        contact:"",                                                                        notes:"Use independent data: ADR $255–260/night, occupancy 36–43% — NOT seller figures."},
+  {id:106,cat:"Environmental Due Diligence",   priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Consultant", cost:"$500–1k",    task:"Check DEQ air quality index",                                           purpose:"Assess air/noise levels.",                                                              contact:"deq.idaho.gov · 208-236-6160",                                            notes:""},
+  {id:107,cat:"Environmental Due Diligence",   priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Consultant", cost:"Included",   task:"Hire for baseline air quality/noise test",                              purpose:"Test levels.",                                                                          contact:"Consultant contacts",                                                     notes:""},
+  {id:108,cat:"Market Analysis",               priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Ty",         cost:"—",          task:"Compile SWOT analysis",                                                 purpose:"Identify risks and opportunities.",                                                     contact:"",                                                                        notes:""},
+  {id:109,cat:"Environmental Due Diligence",   priority:"Mandatory (if RECs)",status:"Pending",day:"Day 15", assigned:"Consultant", cost:"$5k–15k",    task:"Phase II ESA if RECs found",                                            purpose:"Confirm contamination.",                                                                contact:"Consultant contacts",                                                     notes:""},
+  {id:110,cat:"Environmental Due Diligence",   priority:"Mandatory (if RECs)",status:"Pending",day:"Day 15", assigned:"Consultant", cost:"Included",   task:"Approve sampling plan; test for contaminants if RECs",                  purpose:"Require remediation if confirmed.",                                                     contact:"Consultant contacts",                                                     notes:""},
+  {id:111,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for site preparation/earthwork",                             purpose:"Cost for grading, clearing.",                                                           contact:"Civil engineer contacts",                                                 notes:""},
+  {id:112,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for water supply",                                           purpose:"Cost for connections and lines.",                                                       contact:"Lava Hot Springs Water: 208-776-5221",                                    notes:""},
+  {id:113,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for sewer/wastewater",                                        purpose:"Cost for septic or connection.",                                                        contact:"Lava Hot Springs Sewer: 208-776-5221",                                    notes:""},
+  {id:114,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for electricity/power",                                       purpose:"Cost for lines and transformers.",                                                      contact:"Idaho Power: 800-488-6151",                                               notes:""},
+  {id:115,cat:"Infrastructure Cost",           priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for gas/heating",                                             purpose:"Cost for gas lines if needed.",                                                         contact:"Local gas provider",                                                      notes:""},
+  {id:116,cat:"Infrastructure Cost",           priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for telecom/internet",                                        purpose:"Cost for cabling and service.",                                                         contact:"Local telecom providers",                                                 notes:""},
+  {id:117,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for roads/driveways/access",                                  purpose:"Cost for paving and access.",                                                           contact:"Civil engineer contacts",                                                 notes:""},
+  {id:118,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for stormwater management/drainage",                          purpose:"Cost for systems and retention.",                                                       contact:"Civil engineer contacts",                                                 notes:""},
+  {id:119,cat:"Infrastructure Cost",           priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for waste management",                                        purpose:"Cost for dumpsters, recycling.",                                                        contact:"Local waste services",                                                    notes:""},
+  {id:120,cat:"Infrastructure Cost",           priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for lighting/security",                                       purpose:"Cost for lights and cameras.",                                                          contact:"Electrical contractor",                                                   notes:""},
+  {id:121,cat:"Infrastructure Cost",           priority:"Suggested",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for landscaping/common areas",                                purpose:"Cost for plants and paths.",                                                            contact:"Landscape architect",                                                     notes:""},
+  {id:122,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Engineer",   cost:"$500–1k",    task:"Estimates for fire safety/emergency infrastructure",                    purpose:"Cost for hydrants and alarms.",                                                         contact:"Fire department/engineer",                                                notes:""},
+  {id:123,cat:"Infrastructure Cost",           priority:"Mandatory",        status:"Pending", day:"Day 15",  assigned:"Planner",    cost:"$500–1k",    task:"Estimates for permits/fees/regulatory compliance",                      purpose:"Cost for approvals and inspections.",                                                   contact:"208-236-7230 · development@bannockcounty.gov",                           notes:""},
+  {id:124,cat:"Risk Assessment",              priority:"Mandatory",        status:"Pending", day:"Day 16",  assigned:"TBD",        cost:"—",          task:"Follow up on all outstanding requests",                                 purpose:"Ensure responses received.",                                                            contact:"Agency contacts",                                                         notes:""},
+  {id:125,cat:"Risk Assessment",              priority:"Mandatory",        status:"Pending", day:"Day 16",  assigned:"Accountant", cost:"—",          task:"Use Excel for pro forma model",                                         purpose:"Model finances.",                                                                       contact:"nolo.com/legal-encyclopedia/real-estate-forms",                           notes:""},
+  {id:126,cat:"Risk Assessment",              priority:"Mandatory",        status:"Pending", day:"Day 16",  assigned:"TBD",        cost:"—",          task:"Consult lender for financing impacts",                                  purpose:"Assess loan feasibility.",                                                              contact:"Lender contacts",                                                         notes:""},
+  {id:127,cat:"Operational/Other",            priority:"Highly Recommended",status:"Pending",day:"Day 20",  assigned:"Ty",         cost:"Included",   task:"Request existing leases/contracts from seller",                         purpose:"Check existing obligations.",                                                           contact:"Seller contacts from PSA",                                                notes:""},
+  {id:128,cat:"Operational/Other",            priority:"Suggested",        status:"Pending", day:"Day 20",  assigned:"Ty",         cost:"—",          task:"Search local for vendor quotes",                                        purpose:"Find competitive pricing.",                                                             contact:"Angi.com (online)",                                                       notes:""},
+  {id:129,cat:"Operational/Other",            priority:"Suggested",        status:"Pending", day:"Day 20",  assigned:"Ty",         cost:"—",          task:"Get 3 quotes for each vendor category",                                 purpose:"Avoid overpaying.",                                                                     contact:"Local contractors",                                                       notes:""},
+  {id:130,cat:"Operational/Other",            priority:"Mandatory",        status:"Pending", day:"Day 20",  assigned:"Ty",         cost:"Included",   task:"Draft exit strategy",                                                   purpose:"Protect investment if deal falls through.",                                             contact:"",                                                                        notes:""},
+  {id:131,cat:"Financial Due Diligence",      priority:"Highly Recommended",status:"Pending",day:"Day 20",  assigned:"Accountant", cost:"Included",   task:"Test scenarios in pro forma for sensitivity analysis",                  purpose:"Assess downside risks.",                                                                contact:"Accountant contacts",                                                     notes:"Include scenario: Dev Agreement unexecuted + STR moratorium + 50% occupancy."},
+  {id:132,cat:"Infrastructure Cost",          priority:"Mandatory",        status:"Pending", day:"Day 20",  assigned:"Accountant", cost:"—",          task:"Compile all infrastructure cost estimates",                             purpose:"Summarize total infrastructure costs.",                                                 contact:"",                                                                        notes:""},
+  {id:133,cat:"Decision & Negotiation",       priority:"Mandatory",        status:"Pending", day:"Day 24",  assigned:"Team",       cost:"—",          task:"Compile master due diligence report",                                   purpose:"Organize all due diligence info.",                                                      contact:"Team contacts",                                                           notes:""},
+  {id:134,cat:"Decision & Negotiation",       priority:"Mandatory",        status:"Pending", day:"Day 24",  assigned:"Team",       cost:"—",          task:"Meet with team to vote go/no-go",                                       purpose:"Reach consensus decision.",                                                             contact:"Team contacts",                                                           notes:""},
+  {id:135,cat:"Decision & Negotiation",       priority:"Mandatory",        status:"Pending", day:"Day 24",  assigned:"Ty",         cost:"$10–50",     task:"Notify seller in writing of decision",                                  purpose:"Formal written decision.",                                                              contact:"Seller contacts from PSA",                                                notes:""},
+  {id:136,cat:"Operational/Other",            priority:"Highly Recommended",status:"Pending",day:"Day 25",  assigned:"Ty",         cost:"—",          task:"Build insurance/risk management plan",                                  purpose:"Protect against claims.",                                                               contact:"Insurance agents contacts",                                                notes:""},
+  {id:137,cat:"Operational/Other",            priority:"Suggested",        status:"Pending", day:"Day 25",  assigned:"Ty",         cost:"$1k retainer",task:"Hire team via AIA Idaho",                                             purpose:"Ensure quality professional team.",                                                     contact:"aiaidaho.com",                                                            notes:""},
+];
+
+const emptyTask = () => ({task:"",cat:CATS[0],priority:"Mandatory",day:"Day 1",assigned:"",cost:"",purpose:"",contact:"",notes:"",userNotes:"",status:"Pending"});
+const emptyContact = () => ({name:"",group:"Other",role:"",phone:"",email:"",web:"",note:""});
+const inp = (x={}) => ({background:T.high,border:`1px solid ${T.border}`,borderRadius:10,padding:"11px 13px",color:T.text,fontFamily:T.F,fontSize:15,outline:"none",width:"100%",boxSizing:"border-box",...x});
+const lbl = {fontSize:11,color:T.muted,marginBottom:5,letterSpacing:.4,display:"block"};
+const card = (x={}) => ({background:T.surface,border:`1px solid ${T.border}`,borderRadius:14,padding:14,...x});
+
+// ─── APP ────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [items,    setItems]    = useState(() => BASE.map(b=>({...b,userNotes:"",_custom:false})));
+  const [contacts, setContacts] = useState(DEFAULT_CONTACTS);
+  const [warnings, setWarnings] = useState(DEFAULT_WARNINGS);
+  // files = session refs + user uploads, all in one list
+  // session refs: isRef:true, data:null until user uploads the actual file
+  const [files,    setFiles]    = useState(ALL_SESSION_REF_ENTRIES);
+
+  const [view,      setView]     = useState("dashboard");
+  const [selected,  setSelected] = useState(null);  // task id
+  const [editContact, setEditContact] = useState(null); // contact obj or null
+  const [isAddingContact, setIsAddingContact] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [taskForm,  setTaskForm] = useState(emptyTask());
+  const [contactForm, setContactForm] = useState(emptyContact());
+  const [formSaved, setFormSaved] = useState(false);
+  const [localNotes, setLocalNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  // Filters (tasks only)
+  const [fCat,    setFCat]    = useState("All");
+  const [fPri,    setFPri]    = useState("All");
+  const [fStatus, setFStatus] = useState("All");
+  const [fAssign, setFAssign] = useState("All");
+  const [sortBy,  setSortBy]  = useState("day");
+  const [search,  setSearch]  = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
+  const [fileSearch,    setFileSearch]    = useState("");
+
+  const fileRef      = useRef();
+  const refUploadRefs = useRef({});
+  const taskImportRef = useRef();
+  const globalFileRef = useRef();
+
+  // ── Persist ───────────────────────────────────────────────────────────────
+  const persistItems    = useCallback(async v => { try{await window.storage.set("lv6-items",JSON.stringify(v.map(i=>({id:i.id,cat:i.cat,priority:i.priority,status:i.status,day:i.day,assigned:i.assigned,cost:i.cost,task:i.task,purpose:i.purpose,contact:i.contact,notes:i.notes,userNotes:i.userNotes||"",_custom:i._custom||false}))));}catch(e){} }, []);
+  const persistContacts = useCallback(async v => { try{await window.storage.set("lv6-contacts",JSON.stringify(v));}catch(e){} }, []);
+  const persistWarnings = useCallback(async v => { try{await window.storage.set("lv6-warnings",JSON.stringify(v));}catch(e){} }, []);
+  const persistFileMeta = useCallback(async v => { try{await window.storage.set("lv6-filemeta",JSON.stringify(v.map(f=>({id:f.id,taskId:f.taskId,name:f.name,type:f.type,size:f.size,uploadedAt:f.uploadedAt,isRef:f.isRef||false,refId:f.refId||null}))));}catch(e){} }, []);
+
+  // ── Load ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    (async()=>{
+      try{const r=await window.storage.get("lv6-items");if(r?.value){const s=JSON.parse(r.value);setItems(prev=>{const m={};prev.forEach(i=>m[i.id]=i);s.forEach(x=>{if(m[x.id])m[x.id]={...m[x.id],...x};else m[x.id]=x;});return Object.values(m).sort((a,b)=>a.id-b.id);});}}catch(e){}
+      try{const r=await window.storage.get("lv6-contacts");if(r?.value)setContacts(JSON.parse(r.value));}catch(e){}
+      try{const r=await window.storage.get("lv6-warnings");if(r?.value)setWarnings(JSON.parse(r.value));}catch(e){}
+      try{
+        const r=await window.storage.get("lv6-filemeta");
+        if(r?.value){
+          const saved=JSON.parse(r.value); // [{id,taskId,name,type,size,uploadedAt,isRef?,refId?}]
+          // Load data blobs for all saved entries
+          const withData=await Promise.all(saved.map(async f=>{
+            try{const d=await window.storage.get(`lv6-fd-${f.id}`);return{...f,data:d?.value||null};}catch(e){return{...f,data:null};}
+          }));
+          // Start from fresh session refs, then overlay any saved uploads/ref-uploads
+          const base=[...ALL_SESSION_REF_ENTRIES];
+          const savedMap={};withData.forEach(f=>savedMap[f.id]=f);
+          // Replace matching session refs with saved version (which has data), add user uploads
+          const merged=base.map(sr=>savedMap[sr.id]?{...sr,...savedMap[sr.id]}:sr);
+          // Add user-uploaded files that are NOT session refs
+          withData.filter(f=>!f.isRef).forEach(f=>{if(!merged.find(m=>m.id===f.id))merged.push(f);});
+          setFiles(merged);
+        }
+      }catch(e){}
+    })();
+  },[]);
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const sorted = [...items].sort((a,b)=>{
+    if(sortBy==="day")      return dayNum(a.day)-dayNum(b.day);
+    if(sortBy==="priority") return PRI_W[a.priority]-PRI_W[b.priority];
+    if(sortBy==="status")   return STA_W[a.status]-STA_W[b.status];
+    if(sortBy==="cat")      return a.cat.localeCompare(b.cat);
+    if(sortBy==="assigned") return (a.assigned||"").localeCompare(b.assigned||"");
+    return a.id-b.id;
+  });
+  const filtered = sorted.filter(i=>{
+    if(fCat!=="All"&&i.cat!==fCat) return false;
+    if(fPri!=="All"&&i.priority!==fPri) return false;
+    if(fStatus!=="All"&&i.status!==fStatus) return false;
+    if(fAssign!=="All"&&i.assigned!==fAssign) return false;
+    if(search){const q=search.toLowerCase();return i.task.toLowerCase().includes(q)||i.purpose.toLowerCase().includes(q)||(i.assigned||"").toLowerCase().includes(q)||(i.userNotes||"").toLowerCase().includes(q);}
+    return true;
+  });
+  const selItem  = selected!=null ? items.find(i=>i.id===selected) : null;
+  const selIdx   = selected!=null ? filtered.findIndex(i=>i.id===selected) : -1;
+  const done     = items.filter(i=>i.status==="Complete").length;
+  const pct      = Math.round(done/items.length*100);
+  const activeFilters = (fCat!=="All"?1:0)+(fPri!=="All"?1:0)+(fStatus!=="All"?1:0)+(fAssign!=="All"?1:0)+(search?1:0);
+  const allAssignees = ["All",...Array.from(new Set(items.map(i=>i.assigned).filter(Boolean))).sort()];
+  const taskFiles = selected!=null ? files.filter(f=>f.taskId===selected) : [];
+  const taskRefs  = selected!=null ? files.filter(f=>f.taskId===selected&&f.isRef) : [];
+  const taskUploads = selected!=null ? files.filter(f=>f.taskId===selected&&!f.isRef) : [];
+  const visibleFiles = files.filter(f=>!fileSearch||f.name.toLowerCase().includes(fileSearch.toLowerCase())||(f.taskName||"").toLowerCase().includes(fileSearch.toLowerCase()));
+
+  // ── Task mutations ────────────────────────────────────────────────────────
+  const updateItem = (id,patch) => { const ni=items.map(i=>i.id===id?{...i,...patch}:i); setItems(ni); persistItems(ni); };
+  const quickToggle = (e,id) => { e.stopPropagation(); const it=items.find(i=>i.id===id); if(it)updateItem(id,{status:it.status==="Complete"?"Pending":"Complete"}); };
+  const saveTaskForm = () => {
+    if(!taskForm.task.trim()) return;
+    if(isAddingTask){
+      const nid=Math.max(0,...items.map(i=>i.id))+1;
+      const ni=[...items,{...taskForm,id:nid,userNotes:taskForm.userNotes||"",_custom:true}];
+      setItems(ni); persistItems(ni);
+    } else { updateItem(selected,{...taskForm}); }
+    setFormSaved(true); setTimeout(()=>{setFormSaved(false); setView(isAddingTask?"tasks":"detail");},1200);
+  };
+  const deleteTask = id => { if(!window.confirm("Delete this task?")) return; const ni=items.filter(i=>i.id!==id); setItems(ni); persistItems(ni); setView("tasks"); };
+  const saveNotes = () => { updateItem(selected,{userNotes:localNotes}); setNotesSaved(true); setTimeout(()=>setNotesSaved(false),1500); };
+
+  // ── Contact mutations ──────────────────────────────────────────────────────
+  const saveContactForm = () => {
+    if(!contactForm.name.trim()) return;
+    let nc;
+    if(isAddingContact){ nc=[...contacts,{...contactForm,id:uid()}]; }
+    else { nc=contacts.map(c=>c.id===editContact.id?{...c,...contactForm}:c); }
+    setContacts(nc); persistContacts(nc); setEditContact(null); setIsAddingContact(false);
+  };
+  const deleteContact = id => { if(!window.confirm("Delete this contact?")) return; const nc=contacts.filter(c=>c.id!==id); setContacts(nc); persistContacts(nc); };
+
+  // ── Warning mutations ──────────────────────────────────────────────────────
+  const dismissWarning = id => { const nw=warnings.filter(w=>w.id!==id); setWarnings(nw); persistWarnings(nw); };
+
+  // ── File handling ─────────────────────────────────────────────────────────
+  // refEntryId: if set, we're uploading the actual content for an existing session ref entry
+  const handleFileUpload = (e, taskId=null, refEntryId=null) => {
+    const file=e.target.files?.[0]; if(!file) return;
+    if(file.size>5*1024*1024){alert("File > 5 MB. Please compress first.");e.target.value="";return;}
+    const reader=new FileReader();
+    reader.onload=async ev=>{
+      const data=ev.target.result;
+      if(refEntryId){
+        // Uploading actual content for an existing session ref — update it in place
+        const nf=files.map(f=>f.id===refEntryId?{...f,data,size:file.size,uploadedAt:new Date().toISOString()}:f);
+        setFiles(nf); await persistFileMeta(nf);
+        try{await window.storage.set(`lv6-fd-${refEntryId}`,data);}catch(e){}
+      } else {
+        // Brand new user-uploaded file
+        const id=uid();
+        const taskName=taskId?(items.find(i=>i.id===taskId)?.task||""):null;
+        const f={id,taskId,name:file.name,type:file.type,size:file.size,uploadedAt:new Date().toISOString(),data,taskName,isRef:false};
+        const nf=[...files,f];
+        setFiles(nf); await persistFileMeta(nf);
+        try{await window.storage.set(`lv6-fd-${id}`,data);}catch(e){}
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value="";
+  };
+
+  const openFile = async f => {
+    let data = f.data;
+    // Try loading from storage if not in memory
+    if(!data){
+      try{const r=await window.storage.get(`lv6-fd-${f.id}`);data=r?.value;}catch(e){}
+    }
+    if(!data){
+      alert(`"${f.name}" hasn't been uploaded yet. Use the Upload button next to the file name to attach the actual file.`);
+      return;
+    }
+    const a=document.createElement("a"); a.href=data; a.download=f.name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+  const deleteFile = async id => {
+    if(!window.confirm("Remove this file?")) return;
+    const nf=files.filter(f=>f.id!==id); setFiles(nf); await persistFileMeta(nf);
+    try{await window.storage.delete(`lv6-fd-${id}`);}catch(e){}
+  };
+
+  // ── CSV/Excel import ────────────────────────────────────────────────────────
+  const importTasks = async e => {
+    const file=e.target.files?.[0]; if(!file) return;
+    const ext=file.name.split(".").pop().toLowerCase();
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        let rows=[];
+        if(ext==="csv"){
+          const text=ev.target.result;
+          const lines=text.split(/\r?\n/).filter(l=>l.trim());
+          const hdrs=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/[\s\/\-]/g,""));
+          const map={task:["task","actionitem","item","name"],cat:["cat","category"],priority:["priority","pri"],status:["status"],day:["day","timeline","target"],assigned:["assigned","assignee","owner"],cost:["cost","estcost"],purpose:["purpose","reason"],contact:["contact","contacts"],notes:["notes","comments"]};
+          const colIdx={};
+          Object.entries(map).forEach(([k,aliases])=>{const i=hdrs.findIndex(h=>aliases.includes(h));if(i>=0)colIdx[k]=i;});
+          for(let i=1;i<lines.length;i++){
+            const cols=lines[i].split(",");
+            const get=k=>colIdx[k]!=null?(cols[colIdx[k]]||"").trim():"";
+            if(!get("task")) continue;
+            rows.push({task:get("task"),cat:get("cat")||CATS[0],priority:get("priority")||"Mandatory",status:get("status")||"Pending",day:get("day")||"Day 1",assigned:get("assigned")||"",cost:get("cost")||"",purpose:get("purpose")||"",contact:get("contact")||"",notes:get("notes")||""});
+          }
+        } else {
+          alert("Excel import: please save your file as CSV first, then import.");return;
+        }
+        if(rows.length===0){alert("No tasks found. Make sure your file has a 'task' or 'item' column header.");return;}
+        const maxId=Math.max(0,...items.map(i=>i.id));
+        const newItems=rows.map((r,i)=>({...emptyTask(),...r,id:maxId+i+1,userNotes:"",_custom:true}));
+        const ni=[...items,...newItems]; setItems(ni); persistItems(ni);
+        alert(`✓ Imported ${newItems.length} tasks successfully.`);
+      }catch(err){alert("Error reading file: "+err.message);}
+    };
+    if(ext==="csv") reader.readAsText(file);
+    else reader.readAsArrayBuffer(file);
+    e.target.value="";
+  };
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  const openDetail = item => { setSelected(item.id); setLocalNotes(item.userNotes||""); setView("detail"); };
+  const openEditTask = item => { setTaskForm({task:item.task,cat:item.cat,priority:item.priority,day:item.day,assigned:item.assigned||"",cost:item.cost||"",purpose:item.purpose||"",contact:item.contact||"",notes:item.notes||"",userNotes:item.userNotes||"",status:item.status}); setIsAddingTask(false); setView("taskForm"); };
+  const openAddTask  = ()   => { setTaskForm(emptyTask()); setIsAddingTask(true); setView("taskForm"); };
+  const setTF = (k,v) => setTaskForm(p=>({...p,[k]:v}));
+  const setCF = (k,v) => setContactForm(p=>({...p,[k]:v}));
+
+  // ── Top Nav ────────────────────────────────────────────────────────────────
+  const NAV = [{v:"dashboard",icon:"◈",label:"Dashboard"},{v:"tasks",icon:"☑",label:"Tasks"},{v:"contacts",icon:"☎",label:"Contacts"},{v:"files",icon:"📁",label:"Files"}];
+  const navActive = v => {
+    if(v==="tasks"&&["tasks","detail","taskForm"].includes(view)) return true;
+    if(v==="contacts"&&["contacts","contactForm"].includes(view)) return true;
+    return view===v;
+  };
+
+  const TopNav = () => (
+    <div style={{background:"#0e0e0e",borderBottom:`1px solid ${T.border}`,display:"flex",flexShrink:0}}>
+      {NAV.map(t=>{
+        const active=navActive(t.v);
+        return(
+          <button key={t.v} onClick={()=>setView(t.v)}
+            style={{flex:1,padding:"10px 0 8px",background:"transparent",border:"none",borderBottom:`2px solid ${active?T.accent:"transparent"}`,color:active?T.accent:T.muted,cursor:"pointer",fontFamily:T.F,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <span style={{fontSize:17,lineHeight:1}}>{t.icon}</span>
+            <span style={{fontSize:9,letterSpacing:.3}}>{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── DASHBOARD ───────────────────────────────────────────────────────────────
+  const DashboardView = () => (
+    <>
+      <div style={{padding:"10px 14px 8px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+        <div style={{fontSize:9,letterSpacing:2,color:T.muted,textTransform:"uppercase"}}>287 S 6th West St · Bannock County · Idaho</div>
+        <div style={{fontSize:17,fontWeight:700,color:T.text}}>Dashboard</div>
       </div>
+      <div style={{flex:1,overflowY:"auto",padding:12,paddingBottom:20}}>
+        {/* Warnings */}
+        {warnings.length>0&&(
+          <div style={{marginBottom:14}}>
+            {warnings.map(w=>(
+              <div key={w.id} style={{background:w.level==="critical"?T.redDim:"#131004",border:`1px solid ${w.level==="critical"?T.red+"30":T.orange+"30"}`,borderRadius:12,padding:"11px 13px",marginBottom:8,position:"relative"}}>
+                <button onClick={()=>dismissWarning(w.id)}
+                  style={{position:"absolute",top:8,right:10,background:"transparent",border:"none",color:T.muted,cursor:"pointer",fontSize:16,lineHeight:1,padding:"2px 6px",fontFamily:T.F}}>✕</button>
+                <div style={{fontSize:11,fontWeight:700,color:w.level==="critical"?T.red:T.orange,marginBottom:4,paddingRight:24}}>{w.title}</div>
+                <div style={{fontSize:11,color:w.level==="critical"?"#7a3838":"#8a6020",lineHeight:1.6}}>{w.body}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {warnings.length===0&&(
+          <div style={{background:T.greenDim,border:`1px solid ${T.green}30`,borderRadius:12,padding:"10px 13px",marginBottom:14,fontSize:12,color:T.green}}>
+            ✓ All warnings dismissed
+          </div>
+        )}
+        {/* KPIs */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          {[{lb:"Completion",v:`${pct}%`,s:`${done}/${items.length}`,c:T.accent},{lb:"Mandatory Pending",v:items.filter(i=>i.priority==="Mandatory"&&i.status==="Pending").length,s:"required",c:T.red},{lb:"High Priority",v:items.filter(i=>i.priority==="Highly Recommended"&&i.status==="Pending").length,s:"recommended",c:T.blue},{lb:"Files",v:files.length,s:"uploaded",c:T.green}].map(k=>(
+            <div key={k.lb} style={{...card()}}>
+              <div style={{fontSize:9,letterSpacing:1.5,color:T.muted,textTransform:"uppercase",marginBottom:4}}>{k.lb}</div>
+              <div style={{fontSize:26,fontWeight:700,color:k.c,marginBottom:2}}>{k.v}</div>
+              <div style={{fontSize:10,color:"#333"}}>{k.s}</div>
+            </div>
+          ))}
+        </div>
+        {/* Progress */}
+        <div style={{...card(),marginBottom:14}}>
+          <div style={{fontSize:10,letterSpacing:1.5,color:T.muted,textTransform:"uppercase",marginBottom:12}}>Progress by Category</div>
+          {CATS.map(c=>{
+            const t=items.filter(i=>i.cat===c).length;
+            const d=items.filter(i=>i.cat===c&&i.status==="Complete").length;
+            return(
+              <div key={c} style={{marginBottom:9,cursor:"pointer"}} onClick={()=>{setFCat(c);setView("tasks");}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <div style={{fontSize:12,color:T.text}}>{c}</div>
+                  <div style={{fontSize:10,color:T.muted}}>{d}/{t}</div>
+                </div>
+                <div style={{height:3,background:T.faint,borderRadius:2}}>
+                  <div style={{height:"100%",width:`${t>0?d/t*100:0}%`,background:T.purple,borderRadius:2}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Critical */}
+        <div style={{background:T.redDim,border:`1px solid ${T.red}20`,borderRadius:14,padding:14}}>
+          <div style={{fontSize:10,letterSpacing:1.5,color:T.red,textTransform:"uppercase",marginBottom:12}}>Critical Issues — Resolve First</div>
+          {[["Dev Agreement may be UNSIGNED","Demand fully executed, recorded copy. If unexecuted — potential deal-stopper."],["STR Moratorium + No Signed Agreement","No vested rights. Attorney must evaluate both issues together immediately."],["$110k Lien — No Reconveyance Found","Instrument #20709541. Search Bannock Recorder; demand seller release."],["CKJ Ventures Idaho Registration Unconfirmed","Search sosbiz.idaho.gov for Idaho foreign qualification."],["IDWR Water/Geothermal Rights Unverified","Search research.idwr.idaho.gov for all water and geothermal rights."]].map(([t,d],i)=>(
+            <div key={i} style={{paddingBottom:9,marginBottom:9,borderBottom:i<4?`1px solid #2a0808`:"none"}}>
+              <div style={{fontSize:13,fontWeight:600,color:"#d07070",marginBottom:2}}>{t}</div>
+              <div style={{fontSize:12,color:"#7a3838",lineHeight:1.5}}>{d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── TASKS LIST ───────────────────────────────────────────────────────────────
+  const TasksView = () => (
+    <>
+      <div style={{padding:"10px 14px 8px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:2,color:T.muted,textTransform:"uppercase"}}>Lava Hot Springs</div>
+            <div style={{fontSize:17,fontWeight:700,color:T.text}}>Tasks</div>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:22,fontWeight:700,color:T.accent}}>{pct}%</div>
+              <div style={{fontSize:9,color:T.muted}}>{done}/{items.length}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{height:3,background:T.faint,borderRadius:2,marginBottom:8}}>
+          <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${T.purple},${T.accent})`,borderRadius:2}}/>
+        </div>
+        {/* Filter row */}
+        <div style={{display:"flex",gap:7,marginBottom:7}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tasks…"
+            style={{...inp(),padding:"9px 12px",fontSize:14,flex:1}}/>
+          <button onClick={()=>setShowFilters(p=>!p)}
+            style={{padding:"9px 13px",background:activeFilters>0||showFilters?T.accentDim:T.high,border:`1px solid ${activeFilters>0?T.accent:T.border}`,borderRadius:10,color:activeFilters>0?T.accent:T.muted,cursor:"pointer",fontFamily:T.F,fontSize:12,flexShrink:0}}>
+            {activeFilters>0?`Filter (${activeFilters})`:"Filter"}
+          </button>
+          {/* Import */}
+          <input ref={taskImportRef} type="file" accept=".csv,.xlsx,.xls" style={{display:"none"}} onChange={importTasks}/>
+          <button onClick={()=>taskImportRef.current?.click()}
+            style={{padding:"9px 11px",background:T.high,border:`1px solid ${T.border}`,borderRadius:10,color:T.muted,cursor:"pointer",fontFamily:T.F,fontSize:11,flexShrink:0}}
+            title="Import tasks from CSV">
+            ↑ CSV
+          </button>
+        </div>
+        {/* Expanded filters */}
+        {showFilters&&(
+          <div style={{background:T.faint,borderRadius:10,padding:"10px 12px",marginBottom:7}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+              {["All","Pending","In Progress","Complete","Blocked"].map(s=>(
+                <button key={s} onClick={()=>setFStatus(s)} style={{padding:"5px 11px",borderRadius:16,border:`1px solid ${fStatus===s?(SC[s]||T.accent):"#2a2a2a"}`,background:"transparent",color:fStatus===s?(SC[s]||T.accent):T.muted,cursor:"pointer",fontFamily:T.F,fontSize:11}}>{s}</button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+              {["All","Mandatory","Highly Recommended","Suggested"].map(p=>(
+                <button key={p} onClick={()=>setFPri(p)} style={{padding:"5px 11px",borderRadius:16,border:`1px solid ${fPri===p?(PC[p]||T.accent):"#2a2a2a"}`,background:"transparent",color:fPri===p?(PC[p]||T.accent):T.muted,cursor:"pointer",fontFamily:T.F,fontSize:11}}>{p}</button>
+              ))}
+            </div>
+            <select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...inp({padding:"8px 10px",fontSize:12,marginBottom:6}),appearance:"none"}}>
+              {["All",...CATS].map(c=><option key={c}>{c}</option>)}
+            </select>
+            <select value={fAssign} onChange={e=>setFAssign(e.target.value)} style={{...inp({padding:"8px 10px",fontSize:12,marginBottom:6}),appearance:"none"}}>
+              {allAssignees.map(a=><option key={a}>{a}</option>)}
+            </select>
+            <div style={{display:"flex",gap:6,justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",gap:5,overflowX:"auto"}}>
+                {[{v:"day",l:"Day"},{v:"priority",l:"Priority"},{v:"status",l:"Status"},{v:"cat",l:"Category"},{v:"assigned",l:"Assignee"}].map(s=>(
+                  <button key={s.v} onClick={()=>setSortBy(s.v)} style={{padding:"4px 9px",borderRadius:12,border:`1px solid ${sortBy===s.v?T.purple:"#2a2a2a"}`,background:sortBy===s.v?T.purpleDim:"transparent",color:sortBy===s.v?T.purple:T.muted,cursor:"pointer",fontFamily:T.F,fontSize:10,whiteSpace:"nowrap",flexShrink:0}}>{s.l}</button>
+                ))}
+              </div>
+              <button onClick={()=>{setFCat("All");setFPri("All");setFStatus("All");setFAssign("All");setSearch("");}} style={{padding:"4px 9px",borderRadius:12,border:`1px solid #2a2a2a`,background:"transparent",color:T.muted,cursor:"pointer",fontFamily:T.F,fontSize:10,whiteSpace:"nowrap",flexShrink:0}}>Clear</button>
+            </div>
+          </div>
+        )}
+        <div style={{fontSize:10,color:T.muted}}>{filtered.length} of {items.length} · tap row for details</div>
+      </div>
+
+      <div style={{flex:1,overflowY:"auto",padding:8,paddingBottom:20}}>
+        {filtered.map(item=>{
+          const fc=files.filter(f=>f.taskId===item.id).length;
+          const isDone=item.status==="Complete";
+          return(
+            <div key={item.id} onClick={()=>openDetail(item)}
+              style={{padding:"11px 12px",marginBottom:5,borderRadius:12,cursor:"pointer",
+                background:isDone?T.greenDim:T.surface,
+                border:`1px solid ${isDone?"#1a3020":item.status==="Blocked"?T.redDim:T.soft}`,
+                display:"flex",gap:10,alignItems:"flex-start",opacity:isDone?.5:1}}>
+              <button onClick={e=>quickToggle(e,item.id)}
+                style={{width:26,height:26,minWidth:26,borderRadius:7,marginTop:1,flexShrink:0,
+                  border:`2px solid ${SC[item.status]||T.muted}`,background:isDone?T.green:"transparent",
+                  display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:0}}>
+                {isDone&&<span style={{color:"#000",fontSize:12,fontWeight:800}}>✓</span>}
+              </button>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,color:isDone?"#3a3a3a":T.text,textDecoration:isDone?"line-through":"none",lineHeight:1.4,marginBottom:4}}>{item.task}</div>
+                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,padding:"2px 7px",borderRadius:16,border:`1px solid ${PC[item.priority]||T.muted}50`,color:PC[item.priority]||T.muted}}>{item.priority}</span>
+                  <span style={{fontSize:10,color:"#333"}}>{item.day}</span>
+                  {item.assigned&&<span style={{fontSize:10,color:"#333"}}>→ {item.assigned}</span>}
+                  {item.userNotes&&<span style={{fontSize:11,color:T.purple}}>📝</span>}
+                  {fc>0&&<span style={{fontSize:10,color:T.blue}}>📎 {fc}</span>}
+                  {item._custom&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:10,background:T.accentDim,color:T.accent}}>custom</span>}
+                </div>
+              </div>
+              <span style={{fontSize:14,color:"#252525",marginTop:2}}>›</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* FAB */}
+      <button onClick={openAddTask}
+        style={{position:"absolute",bottom:18,right:18,width:52,height:52,borderRadius:26,
+          background:`linear-gradient(135deg,${T.accent},#b06010)`,border:"none",color:"#000",
+          fontSize:26,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 18px ${T.accent}40`,
+          display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
+        +
+      </button>
+    </>
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── TASK DETAIL ────────────────────────────────────────────────────────────
+  const TaskDetail = () => {
+    if(!selItem) return null;
+    return(
+      <>
+        <div style={{padding:"10px 14px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0,display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={()=>setView("tasks")} style={{padding:"7px 12px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:9,color:T.text,cursor:"pointer",fontFamily:T.F,fontSize:13,flexShrink:0}}>← Tasks</button>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:9,letterSpacing:1,color:T.muted,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selItem.cat} · #{selItem.id}</div>
+          </div>
+          <button onClick={()=>openEditTask(selItem)}
+            style={{padding:"7px 13px",background:T.accentDim,border:`1px solid ${T.accent}50`,borderRadius:9,color:T.accent,cursor:"pointer",fontFamily:T.F,fontSize:13,fontWeight:600,flexShrink:0}}>
+            ✎ Edit
+          </button>
+          <div style={{display:"flex",gap:4}}>
+            <button onClick={()=>{if(selIdx>0){const p=filtered[selIdx-1];setSelected(p.id);setLocalNotes(p.userNotes||"");}}} disabled={selIdx<=0}
+              style={{padding:"7px 10px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,color:selIdx>0?T.text:"#2a2a2a",cursor:selIdx>0?"pointer":"default",fontFamily:T.F,fontSize:13}}>‹</button>
+            <button onClick={()=>{if(selIdx<filtered.length-1){const n=filtered[selIdx+1];setSelected(n.id);setLocalNotes(n.userNotes||"");}}} disabled={selIdx>=filtered.length-1}
+              style={{padding:"7px 10px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,color:selIdx<filtered.length-1?T.text:"#2a2a2a",cursor:selIdx<filtered.length-1?"pointer":"default",fontFamily:T.F,fontSize:13}}>›</button>
+          </div>
+        </div>
+
+        <div style={{flex:1,overflowY:"auto",padding:14,paddingBottom:24}}>
+          <div style={{fontSize:17,fontWeight:700,color:T.text,lineHeight:1.4,marginBottom:6}}>{selItem.task}</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            <span style={{fontSize:11,padding:"3px 9px",borderRadius:16,border:`1px solid ${SC[selItem.status]||T.muted}60`,color:SC[selItem.status]||T.muted,background:`${SC[selItem.status]||T.muted}12`}}>{selItem.status}</span>
+            <span style={{fontSize:11,padding:"3px 9px",borderRadius:16,border:`1px solid ${PC[selItem.priority]||T.muted}50`,color:PC[selItem.priority]||T.muted}}>{selItem.priority}</span>
+            <span style={{fontSize:11,color:T.muted}}>{selItem.day}</span>
+            {selItem.assigned&&<span style={{fontSize:11,color:T.muted}}>→ {selItem.assigned}</span>}
+          </div>
+          <div style={{...card(),marginBottom:12}}>
+            {[["Category",selItem.cat],["Timeline",selItem.day],["Assigned",selItem.assigned||"—"],["Est. Cost",selItem.cost||"—"]].map(([l,v])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",paddingBottom:8,marginBottom:8,borderBottom:`1px solid ${T.faint}`}}>
+                <div style={{fontSize:12,color:T.muted}}>{l}</div>
+                <div style={{fontSize:12,color:T.text,textAlign:"right",maxWidth:"65%"}}>{v}</div>
+              </div>
+            ))}
+          </div>
+          {selItem.purpose&&<div style={{...card(),marginBottom:12}}><div style={lbl}>Purpose</div><div style={{fontSize:14,color:T.text,lineHeight:1.7}}>{selItem.purpose}</div></div>}
+          {selItem.contact&&<div style={{...card(),marginBottom:12}}><div style={lbl}>Contact</div><div style={{fontSize:13,color:T.blue,lineHeight:1.8,wordBreak:"break-all"}}>{selItem.contact}</div></div>}
+          {selItem.notes&&(
+            <div style={{background:"#130e05",border:`1px solid ${T.accent}30`,borderRadius:14,padding:14,marginBottom:12}}>
+              <div style={{...lbl,color:T.accent}}>Notes</div>
+              <div style={{fontSize:13,color:"#c09050",lineHeight:1.7}}>{selItem.notes}</div>
+            </div>
+          )}
+          <div style={{...card(),marginBottom:12}}>
+            <div style={{...lbl,color:T.purple}}>Your Notes</div>
+            <textarea value={localNotes} onChange={e=>setLocalNotes(e.target.value)} placeholder="Add notes, updates, findings…" rows={4}
+              style={{...inp(),resize:"vertical",lineHeight:1.7,marginBottom:10}}/>
+            <button onClick={saveNotes} style={{width:"100%",padding:"11px",background:notesSaved?T.green:T.purple,border:"none",borderRadius:10,color:"#fff",cursor:"pointer",fontFamily:T.F,fontSize:14,fontWeight:600,transition:"background .3s"}}>
+              {notesSaved?"✓ Saved!":"Save Notes"}
+            </button>
+          </div>
+
+          {/* FILES */}
+          <div style={{...card(),marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{...lbl,margin:0}}>Files {taskFiles.length>0?`(${taskFiles.length})`:""}</div>
+              <input ref={fileRef} type="file" style={{display:"none"}} onChange={e=>handleFileUpload(e,selected)}/>
+              <button onClick={()=>fileRef.current?.click()}
+                style={{padding:"6px 12px",background:T.accentDim,border:`1px solid ${T.accent}50`,borderRadius:8,color:T.accent,cursor:"pointer",fontFamily:T.F,fontSize:12}}>
+                + Upload New
+              </button>
+            </div>
+
+            {/* User-uploaded files — fully clickable */}
+            {taskUploads.map(f=>(
+              <div key={f.id} onClick={()=>openFile(f)}
+                style={{display:"flex",gap:10,alignItems:"center",padding:"10px 12px",background:T.high,borderRadius:10,marginBottom:6,cursor:"pointer",border:`1px solid ${T.border}`}}>
+                <span style={{fontSize:20,flexShrink:0}}>{extIcon(f.name)}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,color:T.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
+                  <div style={{fontSize:10,color:T.muted}}>{fmtSize(f.size)} · {f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():"—"} · tap to open</div>
+                </div>
+                <button onClick={e=>{e.stopPropagation();deleteFile(f.id);}}
+                  style={{padding:"5px 8px",background:T.redDim,border:`1px solid ${T.red}30`,borderRadius:7,color:T.red,cursor:"pointer",fontFamily:T.F,fontSize:11}}>✕</button>
+              </div>
+            ))}
+
+            {/* Session reference files */}
+            {taskRefs.length>0&&(
+              <div style={{marginTop:taskUploads.length>0?10:0}}>
+                <div style={{fontSize:10,letterSpacing:1,color:T.muted,textTransform:"uppercase",marginBottom:6}}>Session Documents</div>
+                {taskRefs.map(f=>{
+                  const hasData=!!f.data;
+                  return(
+                    <div key={f.id} style={{marginBottom:7}}>
+                      {/* Clickable row — opens if uploaded, shows prompt if not */}
+                      <div onClick={()=>openFile(f)}
+                        style={{display:"flex",gap:10,alignItems:"center",padding:"10px 12px",
+                          background:hasData?"#0a1a0e":"#111",borderRadius:10,
+                          border:`1px solid ${hasData?T.green+"40":T.faint}`,
+                          cursor:hasData?"pointer":"default"}}>
+                        <span style={{fontSize:18,flexShrink:0,opacity:hasData?1:.45}}>{extIcon(f.name)}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,color:hasData?T.blue:"#666",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
+                          {f.warn&&<div style={{fontSize:10,color:"#7a4a18",marginTop:1}}>{f.warn}</div>}
+                          <div style={{fontSize:10,color:hasData?T.green:"#383838",marginTop:1}}>
+                            {hasData?"✓ Uploaded · tap to open":"Not yet uploaded"}
+                          </div>
+                        </div>
+                        {hasData&&<span style={{fontSize:12,color:T.green}}>↗</span>}
+                      </div>
+                      {/* Upload button for refs not yet uploaded */}
+                      {!hasData&&(
+                        <>
+                          <input type="file" style={{display:"none"}}
+                            ref={el=>{if(el)refUploadRefs.current[f.id]=el;}}
+                            onChange={e=>handleFileUpload(e,selected,f.id)}/>
+                          <button onClick={()=>refUploadRefs.current[f.id]?.click()}
+                            style={{width:"100%",marginTop:3,padding:"7px",background:T.faint,border:`1px dashed #2a2a2a`,borderRadius:8,color:"#555",cursor:"pointer",fontFamily:T.F,fontSize:11}}>
+                            ↑ Upload "{f.name}"
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {taskFiles.length===0&&<div style={{textAlign:"center",padding:"16px",color:T.muted,fontSize:13}}>No files for this task yet</div>}
+          </div>
+
+          {selItem._custom&&(
+            <button onClick={()=>deleteTask(selected)}
+              style={{width:"100%",padding:"11px",background:T.redDim,border:`1px solid ${T.red}40`,borderRadius:12,color:T.red,cursor:"pointer",fontFamily:T.F,fontSize:13}}>
+              🗑 Delete This Task
+            </button>
+          )}
+        </div>
+      </>
     );
   };
 
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(<App />);
-</script>
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── TASK FORM ───────────────────────────────────────────────────────────────
+  const TaskFormView = () => (
+    <>
+      <div style={{padding:"10px 14px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0,display:"flex",gap:10,alignItems:"center"}}>
+        <button onClick={()=>setView(isAddingTask?"tasks":"detail")} style={{padding:"7px 12px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:9,color:T.text,cursor:"pointer",fontFamily:T.F,fontSize:13}}>← Back</button>
+        <div style={{fontSize:15,fontWeight:700,color:T.text}}>{isAddingTask?"New Task":"Edit Task"}</div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:14,paddingBottom:24}}>
+        {[{l:"Task / Action Item *",k:"task",rows:3},{l:"Purpose / Reason",k:"purpose",rows:2},{l:"Contact Information",k:"contact",rows:2},{l:"Spreadsheet Notes",k:"notes",rows:2},{l:"Your Personal Notes",k:"userNotes",rows:2}].map(({l,k,rows})=>(
+          <div key={k} style={{marginBottom:12}}>
+            <span style={lbl}>{l}</span>
+            <textarea value={taskForm[k]||""} onChange={e=>setTF(k,e.target.value)} rows={rows} style={{...inp(),resize:"vertical",lineHeight:1.6}}/>
+          </div>
+        ))}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div><span style={lbl}>Status</span>
+            <select value={taskForm.status} onChange={e=>setTF("status",e.target.value)} style={{...inp(),appearance:"none"}}>
+              {STATUSES.map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><span style={lbl}>Priority</span>
+            <select value={taskForm.priority} onChange={e=>setTF("priority",e.target.value)} style={{...inp(),appearance:"none",color:PC[taskForm.priority]||T.text}}>
+              {PRIORITIES.map(p=><option key={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div><span style={lbl}>Timeline / Day</span><input value={taskForm.day} onChange={e=>setTF("day",e.target.value)} style={inp()}/></div>
+          <div><span style={lbl}>Assigned To</span><input value={taskForm.assigned} onChange={e=>setTF("assigned",e.target.value)} style={inp()}/></div>
+        </div>
+        <div style={{marginBottom:12}}><span style={lbl}>Category</span>
+          <select value={taskForm.cat} onChange={e=>setTF("cat",e.target.value)} style={{...inp(),appearance:"none"}}>
+            {CATS.map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div style={{marginBottom:16}}><span style={lbl}>Est. Cost</span><input value={taskForm.cost} onChange={e=>setTF("cost",e.target.value)} placeholder="e.g. $500–1k" style={inp()}/></div>
+        <button onClick={saveTaskForm} style={{width:"100%",padding:"13px",background:formSaved?T.green:T.accent,border:"none",borderRadius:12,color:"#000",cursor:"pointer",fontFamily:T.F,fontSize:15,fontWeight:700,transition:"background .3s",marginBottom:8}}>
+          {formSaved?"✓ Saved!":isAddingTask?"Add Task":"Save Changes"}
+        </button>
+        <button onClick={()=>setView(isAddingTask?"tasks":"detail")} style={{width:"100%",padding:"11px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:12,color:T.muted,cursor:"pointer",fontFamily:T.F,fontSize:13}}>Cancel</button>
+      </div>
+    </>
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── CONTACTS ────────────────────────────────────────────────────────────────
+  const ContactsView = () => {
+    const groups = [...new Set(contacts.map(c=>c.group))];
+    const q = contactSearch.toLowerCase();
+    const vis = contacts.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.role||"").toLowerCase().includes(q)||(c.phone||"").includes(q)||(c.note||"").toLowerCase().includes(q));
+
+    if(editContact!==null||isAddingContact){
+      return(
+        <>
+          <div style={{padding:"10px 14px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0,display:"flex",gap:10,alignItems:"center"}}>
+            <button onClick={()=>{setEditContact(null);setIsAddingContact(false);}} style={{padding:"7px 12px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:9,color:T.text,cursor:"pointer",fontFamily:T.F,fontSize:13}}>← Back</button>
+            <div style={{fontSize:15,fontWeight:700,color:T.text}}>{isAddingContact?"New Contact":"Edit Contact"}</div>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:14,paddingBottom:24}}>
+            {[{l:"Name *",k:"name"},{l:"Role / Title",k:"role"},{l:"Phone",k:"phone"},{l:"Email",k:"email"},{l:"Website",k:"web"},{l:"Notes",k:"note"}].map(({l,k})=>(
+              <div key={k} style={{marginBottom:12}}>
+                <span style={lbl}>{l}</span>
+                {k==="note"
+                  ? <textarea value={contactForm[k]||""} onChange={e=>setCF(k,e.target.value)} rows={3} style={{...inp(),resize:"vertical",lineHeight:1.6}}/>
+                  : <input value={contactForm[k]||""} onChange={e=>setCF(k,e.target.value)} style={inp()}/>
+                }
+              </div>
+            ))}
+            <div style={{marginBottom:16}}>
+              <span style={lbl}>Group</span>
+              <select value={contactForm.group} onChange={e=>setCF("group",e.target.value)} style={{...inp(),appearance:"none"}}>
+                {CONTACT_GROUPS.map(g=><option key={g}>{g}</option>)}
+              </select>
+            </div>
+            <button onClick={saveContactForm}
+              style={{width:"100%",padding:"13px",background:T.accent,border:"none",borderRadius:12,color:"#000",cursor:"pointer",fontFamily:T.F,fontSize:15,fontWeight:700,marginBottom:8}}>
+              {isAddingContact?"Add Contact":"Save Changes"}
+            </button>
+            {!isAddingContact&&editContact&&(
+              <button onClick={()=>{deleteContact(editContact.id);setEditContact(null);}}
+                style={{width:"100%",padding:"11px",background:T.redDim,border:`1px solid ${T.red}40`,borderRadius:12,color:T.red,cursor:"pointer",fontFamily:T.F,fontSize:13,marginBottom:8}}>
+                🗑 Delete Contact
+              </button>
+            )}
+            <button onClick={()=>{setEditContact(null);setIsAddingContact(false);}}
+              style={{width:"100%",padding:"11px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:12,color:T.muted,cursor:"pointer",fontFamily:T.F,fontSize:13}}>Cancel</button>
+          </div>
+        </>
+      );
+    }
+
+    return(
+      <>
+        <div style={{padding:"10px 14px 8px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:17,fontWeight:700,color:T.text}}>Contacts</div>
+            <button onClick={()=>{setContactForm(emptyContact());setIsAddingContact(true);}}
+              style={{padding:"7px 14px",background:T.accentDim,border:`1px solid ${T.accent}50`,borderRadius:9,color:T.accent,cursor:"pointer",fontFamily:T.F,fontSize:13,fontWeight:600}}>
+              + Add
+            </button>
+          </div>
+          <input value={contactSearch} onChange={e=>setContactSearch(e.target.value)} placeholder="Search name, role, phone…"
+            style={{...inp(),padding:"9px 12px",fontSize:14}}/>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:10,paddingBottom:20}}>
+          {groups.filter(g=>vis.some(c=>c.group===g)).map(grp=>(
+            <div key={grp} style={{marginBottom:16}}>
+              <div style={{fontSize:10,letterSpacing:2,color:T.muted,textTransform:"uppercase",marginBottom:8,paddingLeft:4}}>{grp}</div>
+              {vis.filter(c=>c.group===grp).map(c=>(
+                <div key={c.id} style={{...card({padding:"12px 14px"}),marginBottom:6}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                    <div style={{fontSize:14,fontWeight:600,color:T.text,flex:1,marginRight:8}}>{c.name}</div>
+                    <div style={{display:"flex",gap:5}}>
+                      {c.phone&&<a href={`tel:${c.phone}`} style={{padding:"5px 10px",background:T.greenDim,border:`1px solid ${T.green}40`,borderRadius:7,color:T.green,fontSize:11,textDecoration:"none",fontFamily:T.F}}>📞</a>}
+                      <button onClick={()=>{setContactForm({name:c.name,group:c.group,role:c.role||"",phone:c.phone||"",email:c.email||"",web:c.web||"",note:c.note||""});setEditContact(c);setIsAddingContact(false);}}
+                        style={{padding:"5px 10px",background:T.accentDim,border:`1px solid ${T.accent}40`,borderRadius:7,color:T.accent,cursor:"pointer",fontFamily:T.F,fontSize:11}}>✎</button>
+                    </div>
+                  </div>
+                  {c.role&&<div style={{fontSize:12,color:T.muted,marginBottom:c.phone||c.email||c.web?4:0}}>{c.role}</div>}
+                  {c.phone&&<div style={{fontSize:12,color:T.text,marginBottom:2}}>{c.phone}</div>}
+                  {c.email&&<div style={{fontSize:12,color:T.blue,marginBottom:2,wordBreak:"break-all"}}>{c.email}</div>}
+                  {c.web&&<div style={{fontSize:12,color:T.blue,marginBottom:2,wordBreak:"break-all"}}>{c.web}</div>}
+                  {c.note&&<div style={{fontSize:11,color:"#484440",marginTop:4,lineHeight:1.5}}>{c.note}</div>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── GLOBAL FILES ─────────────────────────────────────────────────────────────
+  const FilesView = () => {
+    const uploadedCount = files.filter(f=>f.data).length;
+    const refCount = files.filter(f=>f.isRef&&!f.data).length;
+    // Deduplicate session refs by refId for display (show each doc once, list tasks)
+    const refsByRefId = {};
+    files.filter(f=>f.isRef).forEach(f=>{
+      if(!refsByRefId[f.refId]) refsByRefId[f.refId]={...f,taskIds:[f.taskId]};
+      else refsByRefId[f.refId].taskIds.push(f.taskId);
+    });
+    const uniqueRefs = Object.values(refsByRefId);
+    const userUploads = files.filter(f=>!f.isRef);
+    const visUploads = userUploads.filter(f=>!fileSearch||f.name.toLowerCase().includes(fileSearch.toLowerCase())||(f.taskName||"").toLowerCase().includes(fileSearch.toLowerCase()));
+    const visRefs = uniqueRefs.filter(f=>!fileSearch||f.name.toLowerCase().includes(fileSearch.toLowerCase()));
+    // Per-ref upload refs for global files view
+    const gRefInputs = useRef({});
+
+    return(
+      <>
+        <div style={{padding:"10px 14px 8px",background:"#101010",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div>
+              <div style={{fontSize:17,fontWeight:700,color:T.text}}>Files</div>
+              <div style={{fontSize:10,color:T.muted}}>{uploadedCount} uploaded · {refCount} session refs pending</div>
+            </div>
+            <input ref={globalFileRef} type="file" style={{display:"none"}} onChange={e=>handleFileUpload(e,null)}/>
+            <button onClick={()=>globalFileRef.current?.click()}
+              style={{padding:"7px 14px",background:T.accentDim,border:`1px solid ${T.accent}50`,borderRadius:9,color:T.accent,cursor:"pointer",fontFamily:T.F,fontSize:13,fontWeight:600}}>
+              + Upload
+            </button>
+          </div>
+          <input value={fileSearch} onChange={e=>setFileSearch(e.target.value)} placeholder="Search files…"
+            style={{...inp(),padding:"9px 12px",fontSize:14}}/>
+        </div>
+
+        <div style={{flex:1,overflowY:"auto",padding:10,paddingBottom:20}}>
+
+          {/* User uploads */}
+          {visUploads.length>0&&(
+            <div style={{marginBottom:18}}>
+              <div style={{fontSize:10,letterSpacing:2,color:T.muted,textTransform:"uppercase",marginBottom:8,paddingLeft:4}}>Uploaded Files ({visUploads.length})</div>
+              {visUploads.map(f=>(
+                <div key={f.id} onClick={()=>openFile(f)}
+                  style={{display:"flex",gap:10,alignItems:"center",padding:"11px 13px",background:T.surface,borderRadius:12,marginBottom:6,cursor:"pointer",border:`1px solid ${T.border}`}}>
+                  <span style={{fontSize:22,flexShrink:0}}>{extIcon(f.name)}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,color:T.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
+                    <div style={{fontSize:10,color:T.muted}}>{fmtSize(f.size)} · {f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():"—"}{f.taskName?` · Task: ${f.taskName.slice(0,40)}`:""}</div>
+                  </div>
+                  <div style={{display:"flex",gap:5}}>
+                    <div style={{padding:"5px 9px",background:T.blueDim,border:`1px solid ${T.blue}30`,borderRadius:7,color:T.blue,fontSize:11}}>Open</div>
+                    <button onClick={e=>{e.stopPropagation();deleteFile(f.id);}}
+                      style={{padding:"5px 9px",background:T.redDim,border:`1px solid ${T.red}30`,borderRadius:7,color:T.red,cursor:"pointer",fontFamily:T.F,fontSize:11}}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Session reference docs */}
+          {visRefs.length>0&&(
+            <div style={{marginBottom:18}}>
+              <div style={{fontSize:10,letterSpacing:2,color:T.muted,textTransform:"uppercase",marginBottom:8,paddingLeft:4}}>Session Documents ({visRefs.length})</div>
+              {visRefs.map(f=>{
+                const hasData=!!f.data;
+                // Find actual entries for all tasks to get per-task IDs for uploading
+                const allEntries=files.filter(ff=>ff.isRef&&ff.refId===f.refId);
+                const firstEntry=allEntries[0];
+                return(
+                  <div key={f.refId} style={{marginBottom:8}}>
+                    <div onClick={()=>openFile(firstEntry||f)}
+                      style={{display:"flex",gap:10,alignItems:"center",padding:"11px 13px",
+                        background:hasData?"#0a1a0e":T.surface,borderRadius:12,
+                        border:`1px solid ${hasData?T.green+"40":T.border}`,
+                        cursor:hasData?"pointer":"default"}}>
+                      <span style={{fontSize:22,flexShrink:0,opacity:hasData?1:.4}}>{extIcon(f.name)}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,color:hasData?T.blue:"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
+                        {f.warn&&<div style={{fontSize:10,color:"#7a4a18",marginTop:1}}>{f.warn}</div>}
+                        <div style={{fontSize:10,color:hasData?T.green:"#383838",marginTop:1}}>
+                          {hasData?`✓ Uploaded · tap to open`:`Linked to ${f.taskIds?.length||1} task(s) · not yet uploaded`}
+                        </div>
+                      </div>
+                      {hasData&&<span style={{fontSize:13,color:T.green}}>↗</span>}
+                    </div>
+                    {!hasData&&firstEntry&&(
+                      <>
+                        <input type="file" style={{display:"none"}}
+                          ref={el=>{if(el)gRefInputs.current[f.refId]=el;}}
+                          onChange={e=>{
+                            // Upload this ref for all task linkages
+                            const file2=e.target.files?.[0];if(!file2)return;
+                            const reader=new FileReader();
+                            reader.onload=async ev=>{
+                              const data=ev.target.result;
+                              const nf=files.map(ff=>ff.isRef&&ff.refId===f.refId?{...ff,data,size:file2.size,uploadedAt:new Date().toISOString()}:ff);
+                              setFiles(nf);await persistFileMeta(nf);
+                              // Save data under first entry id (all share same content)
+                              try{await window.storage.set(`lv6-fd-${firstEntry.id}`,data);}catch(err){}
+                            };
+                            reader.readAsDataURL(file2);
+                            e.target.value="";
+                          }}/>
+                        <button onClick={()=>gRefInputs.current[f.refId]?.click()}
+                          style={{width:"100%",marginTop:3,padding:"8px",background:T.faint,border:`1px dashed #2a2a2a`,borderRadius:8,color:"#555",cursor:"pointer",fontFamily:T.F,fontSize:11}}>
+                          ↑ Upload "{f.name}"
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {files.length===0&&(
+            <div style={{textAlign:"center",padding:"48px 16px",color:T.muted}}>
+              <div style={{fontSize:40,marginBottom:8}}>📁</div>
+              <div style={{fontSize:14}}>No files yet</div>
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  // ─── RENDER ────────────────────────────────────────────────────────────────
+  return(
+    <div style={{maxWidth:540,margin:"0 auto",height:"100vh",display:"flex",flexDirection:"column",background:T.bg,color:T.text,fontFamily:T.F,overflow:"hidden",position:"relative"}}>
+      <TopNav/>
+      {view==="dashboard" && <DashboardView/>}
+      {view==="tasks"     && <TasksView/>}
+      {view==="detail"    && <TaskDetail/>}
+      {view==="taskForm"  && <TaskFormView/>}
+      {view==="contacts"  && <ContactsView/>}
+      {view==="contactForm"&&<ContactsView/>}
+      {view==="files"     && <FilesView/>}
+      <style>{`*{-webkit-tap-highlight-color:transparent;}::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#282828;border-radius:2px;}select,input,textarea{-webkit-appearance:none;}`}</style>
+    </div>
+  );
+}
 </body>
 </html>
