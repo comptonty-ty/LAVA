@@ -1071,7 +1071,7 @@ const App = function() {
   };
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
-  return (
+    return (
     <div style={{ maxWidth: '540px', margin: '0 auto', height: '100vh', display: 'flex', flexDirection: 'column', background: T.bg, color: T.text, fontFamily: T.F, overflow: 'hidden', position: 'relative' }}>
       <TopNav />
       {view === "dashboard" && <DashboardView />}
@@ -1089,9 +1089,10 @@ const App = function() {
       `}</style>
     </div>
   );
+}
 
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(<App />);
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
 </script>
 
 </body>
