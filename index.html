@@ -3,33 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lava DD - Claude AI Component</title>
-  <!-- Load React and React DOM from CDN -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <!-- Babel standalone to transpile JSX in-browser -->
+  <title>LAVA Component from Claude</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    // Paste the ENTIRE contents of your lava-dd-master.jsx here.
-    // Important changes:
-    // - If it has "export default SomeComponent;", change to "const App = SomeComponent;" (or rename as needed)
-    // - Remove any "export" lines
-    // - At the end, add: ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-    // Example placeholder:
+    // Paste the FULL code from your lava-dd-master.jsx here.
+    // Adjustments:
+    // - Replace any "export default ComponentName;" with "const App = ComponentName;"
+    // - Remove export lines.
+    // - Ensure the component is defined (e.g., const App = () => { ... return ( <div>...</div> ); })
+    // Example skeleton – replace the return part with your JSX:
+
     const App = () => {
       return (
-        <div>
-          <h1>Hello from your Claude .jsx file!</h1>
-          {/* PASTE YOUR ACTUAL JSX CODE HERE – replace this comment */}
+        <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+          <h1>LAVA - Your Claude AI Component</h1>
+          {/* === PASTE YOUR ACTUAL JSX FROM lava-dd-master.jsx HERE === */}
+          {/* For example: <p>Hello world from .jsx!</p> or your full component code */}
         </div>
       );
     };
 
-    // Render it
+    // Render the app
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
