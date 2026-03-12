@@ -12,26 +12,18 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    // Paste the FULL code from your lava-dd-master.jsx here.
-    // Adjustments:
-    // - Replace any "export default ComponentName;" with "const App = ComponentName;"
-    // - Remove export lines.
-    // - Ensure the component is defined (e.g., const App = () => { ... return ( <div>...</div> ); })
-    // Example skeleton – replace the return part with your JSX:
+  const App = () => {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
+        <h1 style={{ color: '#333' }}>Test Render Successful!</h1>
+        <p style={{ fontSize: '1.2em' }}>If you see this, React + Babel is working via CDN.</p>
+        <p>Now paste your real JSX code below this comment.</p>
+      </div>
+    );
+  };
 
-    const App = () => {
-      return (
-        <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-          <h1>LAVA - Your Claude AI Component</h1>
-          {/* === PASTE YOUR ACTUAL JSX FROM lava-dd-master.jsx HERE === */}
-          {/* For example: <p>Hello world from .jsx!</p> or your full component code */}
-        </div>
-      );
-    };
-
-    // Render the app
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+</script>
 </body>
 </html>
