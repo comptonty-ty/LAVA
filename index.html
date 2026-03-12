@@ -1071,26 +1071,28 @@ const App = function() {
   };
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
-  return(
-    <div style={{maxWidth:540,margin:"0 auto",height:"100vh",display:"flex",flexDirection:"column",background:T.bg,color:T.text,fontFamily:T.F,overflow:"hidden",position:"relative"}}>
-      <TopNav/>
-      {view==="dashboard" && <DashboardView/>}
-      {view==="tasks"     && <TasksView/>}
-      {view==="detail"    && <TaskDetail/>}
-      {view==="taskForm"  && <TaskFormView/>}
-      {view==="contacts"  && <ContactsView/>}
-      {view==="contactForm"&&<ContactsView/>}
-      {view==="files"     && <FilesView/>}
-      <style>{`*{-webkit-tap-highlight-color:transparent;}::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#282828;border-radius:2px;}select,input,textarea{-webkit-appearance:none;}`}</style>
+  return (
+    <div style={{maxWidth: '540px', margin: '0 auto', height: '100vh', display: 'flex', flexDirection: 'column', background: T.bg, color: T.text, fontFamily: T.F, overflow: 'hidden', position: 'relative'}}>
+      <TopNav />
+      {view === "dashboard" && <DashboardView />}
+      {view === "tasks" && <TasksView />}
+      {view === "detail" && <TaskDetail />}
+      {view === "taskForm" && <TaskFormView />}
+      {view === "contacts" && <ContactsView />}
+      {view === "contactForm" && <ContactsView />}
+      {view === "files" && <FilesView />}
+      <style>{`
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: #282828; border-radius: 2px; }
+        select, input, textarea { -webkit-appearance: none; }
+      `}</style>
     </div>
   );
-  // the last line of your return statement or style
-  </div>
-);
-}
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
-</script>   <!-- ← ADD THIS LINE RIGHT HERE -->
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+</script>
+
 </body>
 </html>
