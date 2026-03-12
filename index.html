@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lava DD - Claude AI Component</title>
+  <!-- Load React and React DOM from CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel standalone to transpile JSX in-browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // Paste the ENTIRE contents of your lava-dd-master.jsx here.
+    // Important changes:
+    // - If it has "export default SomeComponent;", change to "const App = SomeComponent;" (or rename as needed)
+    // - Remove any "export" lines
+    // - At the end, add: ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    // Example placeholder:
+    const App = () => {
+      return (
+        <div>
+          <h1>Hello from your Claude .jsx file!</h1>
+          {/* PASTE YOUR ACTUAL JSX CODE HERE – replace this comment */}
+        </div>
+      );
+    };
+
+    // Render it
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
